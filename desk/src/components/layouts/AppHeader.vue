@@ -20,7 +20,7 @@ function goToDesk() {
   console.log("Go to Desk button clicked");
   
   // Replace this URL with your actual desk page URL
-  const deskURL = 'https://test-bayan.frappe.cloud/app';
+  const deskURL = 'https://erp.bayaanacademy.com/app';
   window.location.href = deskURL;
 }
 </script>
