@@ -10,7 +10,6 @@ import { FileSystemIconLoader } from "unplugin-icons/loaders";
 import { SVG, cleanupSVG, parseColors } from "@iconify/tools";
 import LucideIcons from "./lucide";
 import { VitePWA } from "vite-plugin-pwa";
-import externalizeDeps from 'vite-plugin-externalize-deps';
 
 export default defineConfig({
   plugins: [
@@ -95,9 +94,6 @@ export default defineConfig({
           return r.toMinifiedString();
         }),
       },
-    }),
-    externalizeDeps({
-      include: ['frappe-ui'], 
     }),
   ],
   resolve: {
