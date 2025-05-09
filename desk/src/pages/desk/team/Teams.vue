@@ -20,6 +20,10 @@
         emptyState: {
           title: emptyMessage,
         },
+        rowRoute: {
+          name: 'Team',
+          prop: 'teamId',
+        },
       }"
       @row-click="handleRowClick"
       @empty-state-action="showNewDialog = true"
@@ -87,7 +91,6 @@ const newTeam = createResource({
       },
     });
   },
-  onError: useError({ title: "Error creating team" }),
 });
 
 usePageMeta(() => {

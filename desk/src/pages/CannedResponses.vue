@@ -23,15 +23,15 @@
         </Button>
       </template>
     </LayoutHeader>
-    <div class="flex-1 overflow-y-auto p-2">
+    <div class="flex-1 overflow-y-auto">
       <div
-        v-if="!cannedResponses.loading"
-        class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 px-5 pb-3"
+        v-if="cannedResponses.data?.length > 0"
+        class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4"
       >
         <div
           v-for="cannedResponse in cannedResponses.data"
           :key="cannedResponse.name"
-          class="group flex h-56 cursor-pointer flex-col justify-between gap-2 rounded-lg border px-5 py-4 shadow-sm hover:bg-gray-50"
+          class="group flex h-60 cursor-pointer flex-col justify-between gap-2 rounded-lg border px-4 py-3 pt-2 shadow-sm hover:bg-gray-50"
           @click="editItem(cannedResponse)"
         >
           <div class="flex items-center justify-between">
@@ -59,8 +59,8 @@
             v-if="cannedResponse.message"
             :content="cannedResponse.message"
             :editable="false"
-            editor-class="!prose-sm max-w-none !text-sm text-gray-600 focus:outline-none"
-            class="flex-1 overflow-hidden"
+            editor-class="prose-sm"
+            class="flex-1 overflow-hidden response-preview"
           />
           <div class="mt-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
@@ -79,6 +79,11 @@
           </div>
         </div>
       </div>
+      <EmptyState
+        v-else
+        title="No Canned Responses Found"
+        @emptyStateAction="showNewDialog = true"
+      />
     </div>
     <CannedResponseModal
       v-model="showNewDialog"
@@ -107,37 +112,42 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
+import { LayoutHeader } from "@/components";
+import { CannedResponseModal } from "@/components/canned-response/";
+import { dayjs } from "@/dayjs";
+import { useUserStore } from "@/stores/user";
+import { dateFormat, dateTooltipFormat } from "@/utils";
 import {
-  createListResource,
   Breadcrumbs,
   Dropdown,
   TextEditor,
   Tooltip,
   call,
+  createListResource,
   usePageMeta,
 } from "frappe-ui";
-import { CannedResponseModal } from "@/components/canned-response/";
-import { LayoutHeader } from "@/components";
-import { useUserStore } from "@/stores/user";
-import { dateFormat, dateTooltipFormat } from "@/utils";
-import { dayjs } from "@/dayjs";
+import { ref } from "vue";
+import { useRoute } from "vue-router";
+import EmptyState from "../components/EmptyState.vue";
 
 const { getUser } = useUserStore();
 
 const breadcrumbs = [
   { label: "Canned Responses", route: { name: "CannedResponses" } },
 ];
+const route = useRoute();
 
 const title = ref(null);
 const message = ref(null);
 const name = ref(null);
-const showNewDialog = ref(false);
+const isNew = route.hash.split("#")[1] === "new";
+const showNewDialog = ref(isNew || false);
 
 const cannedResponses = createListResource({
   doctype: "HD Canned Response",
   fields: ["name", "title", "message", "owner", "modified"],
   auto: true,
+  orderBy: "modified desc",
 });
 
 function editItem(cannedResponse) {
@@ -161,3 +171,9 @@ usePageMeta(() => {
   };
 });
 </script>
+
+<style>
+.response-preview :where(p, span, a) {
+  @apply !text-gray-600;
+}
+</style>

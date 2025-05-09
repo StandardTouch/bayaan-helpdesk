@@ -1,11 +1,11 @@
 import frappe
 
+from helpdesk.utils import agent_only
+
 
 @frappe.whitelist()
+@agent_only
 def get_users():
-    if frappe.session.user == "Guest":
-        frappe.throw(frappe._("Authentication failed"), exc=frappe.AuthenticationError)
-
     users = frappe.qb.get_query(
         "User",
         fields=["name", "email", "enabled", "user_image", "full_name", "user_type"],

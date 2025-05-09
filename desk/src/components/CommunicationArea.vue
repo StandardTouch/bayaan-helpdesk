@@ -27,13 +27,17 @@
         </Button>
       </div>
     </div>
-    <div v-show="showCommentBox">
+    <div
+      v-show="showCommentBox"
+      @keydown.ctrl.enter.capture.stop="submitComment"
+      @keydown.meta.enter.capture.stop="submitComment"
+    >
       <CommentTextEditor
+        ref="commentTextEditorRef"
         v-model="doc"
-        v-model:attachments="attachments"
         :editable="showCommentBox"
         :doctype="doctype"
-        placeholder="Add a comment..."
+        placeholder="@John could you please look into this?"
         @submit="
           () => {
             showCommentBox = false;
@@ -57,7 +61,7 @@
         ref="emailEditorRef"
         v-model="doc"
         v-model:content="content"
-        v-model:attachments="attachments"
+        placeholder="Hi John, we are looking into this issue."
         :to-emails="toEmails"
         :cc-emails="ccEmails"
         :bcc-emails="bccEmails"
@@ -83,13 +87,15 @@ import { ref } from "vue";
 import { EmailEditor, CommentTextEditor } from "@/components";
 import { EmailIcon, CommentIcon } from "@/components/icons/";
 
+const emit = defineEmits(["update"]);
 const content = defineModel("content");
+const doc = defineModel();
+
 const showEmailBox = ref(false);
 const showCommentBox = ref(false);
-const doc = defineModel();
-const attachments = ref([]);
-const emit = defineEmits(["update"]);
+
 const emailEditorRef = ref(null);
+const commentTextEditorRef = ref(null);
 
 function toggleEmailBox() {
   if (showCommentBox.value) {
@@ -103,6 +109,16 @@ function toggleCommentBox() {
     showEmailBox.value = false;
   }
   showCommentBox.value = !showCommentBox.value;
+}
+
+function submitEmail() {
+  emailEditorRef.value.submitMail();
+  emit("update");
+}
+
+function submitComment() {
+  commentTextEditorRef.value.submitComment();
+  emit("update");
 }
 
 function replyToEmail(data: object) {

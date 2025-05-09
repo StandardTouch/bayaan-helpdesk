@@ -66,7 +66,7 @@
         <Button appearance="secondary" class="mr-2" @click="close()"
           >Cancel</Button
         >
-        <div class="grow">
+        <div class="grow mt-2">
           <Button
             @click="removeAllEmailFromQueue()"
             v-if="inviteQueue.length > 1"
@@ -184,22 +184,6 @@ export default {
           });
 
           this.close();
-        },
-        onError: (err) => {
-          if (err.exc_type == "PaywallReachedError") {
-            this.$toast({
-              title: "Paywall Reached!",
-              text: "You have reached the maximum number of agents you can add. Please upgrade your plan to add more agents.",
-              icon: "x",
-              iconClasses: "text-red-500",
-            });
-          } else {
-            this.$toast({
-              title: "Error Sending Invites!",
-              icon: "x",
-              iconClasses: "text-red-500",
-            });
-          }
         },
       };
     },

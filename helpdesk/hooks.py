@@ -17,7 +17,6 @@ add_to_apps_screen = [
     }
 ]
 
-before_install = "helpdesk.setup.install.before_install"
 after_install = "helpdesk.setup.install.after_install"
 after_migrate = [
     "helpdesk.search.build_index_in_background",
@@ -27,6 +26,9 @@ after_migrate = [
 scheduler_events = {
     "all": ["helpdesk.search.build_index_if_not_exists"],
     "hourly": ["helpdesk.search.download_corpus"],
+    "daily": [
+        "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.close_tickets_after_n_days"
+    ],
 }
 
 
