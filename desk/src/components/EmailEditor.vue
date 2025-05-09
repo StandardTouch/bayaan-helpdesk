@@ -3,7 +3,8 @@
     ref="editorRef"
     :editor-class="[
       'prose-sm max-w-none mx-10 max-h-[50vh] overflow-y-auto py-3',
-      true && 'min-h-[7rem]',
+      'min-h-[7rem]',
+      getFontFamily(newEmail),
     ]"
     :content="newEmail"
     :starterkit-options="{ heading: { levels: [2, 3, 4, 5, 6] } }"
@@ -96,7 +97,10 @@
               <template #default="{ openFileSelector }">
                 <Button variant="ghost" @click="openFileSelector()">
                   <template #icon>
-                    <AttachmentIcon class="h-4" />
+                    <AttachmentIcon
+                      class="h-4"
+                      style="color: #000000; stroke-width: 1.5 !important"
+                    />
                   </template>
                 </Button>
               </template>
@@ -106,33 +110,23 @@
               @click="showCannedResponseSelectorModal = true"
             >
               <template #icon>
-                <EmailIcon class="h-4" />
+                <EmailIcon
+                  class="h-4"
+                  style="color: #000000; stroke-width: 1.2"
+                />
               </template>
             </Button>
           </div>
         </div>
         <div class="mt-2 flex items-center justify-end space-x-2 sm:mt-0">
-          <Button
-            label="Discard"
-            @click="
-              () => {
-                ccEmailsClone = [];
-                bccEmailsClone = [];
-                cc = false;
-                bcc = false;
-                newEmail = '';
-                emit('discard');
-              }
-            "
-          />
+          <Button label="Discard" @click="handleDiscard" />
           <Button
             variant="solid"
             :disabled="emailEmpty"
-            :loading="loading"
-            label="Submit"
+            :loading="sendMail.loading"
+            label="Send"
             @click="
               () => {
-                loading = true;
                 submitMail();
               }
             "
@@ -157,7 +151,13 @@ import {
   TextEditorFixedMenu,
   createResource,
 } from "frappe-ui";
-import { validateEmail } from "@/utils";
+import {
+  createToast,
+  validateEmail,
+  textEditorMenuButtons,
+  isContentEmpty,
+  getFontFamily,
+} from "@/utils";
 import {
   MultiSelectInput,
   AttachmentItem,
@@ -168,7 +168,6 @@ import { PreserveVideoControls } from "@/tiptap-extensions";
 
 const editorRef = ref(null);
 const showCannedResponseSelectorModal = ref(false);
-const loading = ref(false);
 
 const props = defineProps({
   placeholder: {
@@ -196,17 +195,15 @@ const props = defineProps({
     default: () => [],
   },
 });
+const emit = defineEmits(["submit", "discard"]);
+const doc = defineModel();
 
-const newEmail = useStorage("emailBoxContent", "");
-
+const newEmail = useStorage("emailBoxContent" + doc.value.name, "");
+const attachments = ref([]);
 const emailEmpty = computed(() => {
-  return !newEmail.value || newEmail.value === "<p></p>";
+  return isContentEmpty(newEmail.value);
 });
 
-const emit = defineEmits(["submit", "discard"]);
-
-const doc = defineModel();
-const attachments = ref([]);
 const toEmailsClone = ref([...props.toEmails]);
 const ccEmailsClone = ref([...props.ccEmails]);
 const bccEmailsClone = ref([...props.bccEmails]);
@@ -222,27 +219,39 @@ function applyCannedResponse(template) {
   showCannedResponseSelectorModal.value = false;
 }
 
-function submitMail() {
-  const sendMail = createResource({
-    url: "run_doc_method",
-    makeParams: () => ({
-      dt: props.doctype,
-      dn: doc.value.name,
-      method: "reply_via_agent",
-      args: {
-        attachments: attachments.value.map((x) => x.name),
-        to: toEmailsClone.value.join(","),
-        cc: ccEmailsClone.value?.join(","),
-        bcc: bccEmailsClone.value?.join(","),
-        message: newEmail.value,
-      },
-    }),
-    onSuccess: () => {
-      newEmail.value = "";
-      emit("submit");
-      loading.value = false;
+const sendMail = createResource({
+  url: "run_doc_method",
+  makeParams: () => ({
+    dt: props.doctype,
+    dn: doc.value.name,
+    method: "reply_via_agent",
+    args: {
+      attachments: attachments.value.map((x) => x.name),
+      to: toEmailsClone.value.join(","),
+      cc: ccEmailsClone.value?.join(","),
+      bcc: bccEmailsClone.value?.join(","),
+      message: newEmail.value,
     },
-  });
+  }),
+  onSuccess: () => {
+    resetState();
+    emit("submit");
+  },
+  debounce: 300,
+});
+
+function submitMail() {
+  if (isContentEmpty(newEmail.value)) {
+    return;
+  }
+  if (!toEmailsClone.value.length) {
+    createToast({
+      text: "Please enter a recipient email address",
+      icon: "x",
+      iconClasses: "text-red-600",
+    });
+    return;
+  }
 
   sendMail.submit();
 }
@@ -288,43 +297,23 @@ function addToReply(
     .run();
 }
 
-const textEditorMenuButtons = [
-  "Paragraph",
-  ["Heading 2", "Heading 3", "Heading 4", "Heading 5", "Heading 6"],
-  "Separator",
-  "Bold",
-  "Italic",
-  "Separator",
-  "Bullet List",
-  "Numbered List",
-  "Separator",
-  "Align Left",
-  "Align Center",
-  "Align Right",
-  "FontColor",
-  "Separator",
-  "Image",
-  "Video",
-  "Link",
-  "Blockquote",
-  "Code",
-  "Horizontal Rule",
-  [
-    "InsertTable",
-    "AddColumnBefore",
-    "AddColumnAfter",
-    "DeleteColumn",
-    "AddRowBefore",
-    "AddRowAfter",
-    "DeleteRow",
-    "MergeCells",
-    "SplitCell",
-    "ToggleHeaderColumn",
-    "ToggleHeaderRow",
-    "ToggleHeaderCell",
-    "DeleteTable",
-  ],
-];
+function resetState() {
+  newEmail.value = null;
+  attachments.value = [];
+}
+
+function handleDiscard() {
+  attachments.value = [];
+  newEmail.value = null;
+
+  ccEmailsClone.value = [];
+  bccEmailsClone.value = [];
+  ccEmailsClone.value = [];
+  showCC.value = false;
+  showBCC.value = false;
+
+  emit("discard");
+}
 
 const editor = computed(() => {
   return editorRef.value.editor;
@@ -333,5 +322,6 @@ const editor = computed(() => {
 defineExpose({
   addToReply,
   editor,
+  submitMail,
 });
 </script>

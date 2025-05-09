@@ -1,9 +1,26 @@
 <template>
   <div class="flex w-[382px] flex-col justify-between border-l">
-    <div class="h-10.5 flex items-center justify-between border-b px-5 py-2.5">
-      <span class="cursor-copy text-lg font-semibold" @click="copyToClipboard()"
-        >#{{ ticket.name }}</span
+    <div
+      class="flex h-10.5 items-center border-b px-5 py-2.5 text-lg font-medium text-ink-gray-9 justify-between"
+    >
+      <span
+        class="cursor-copy text-lg font-semibold"
+        @click="copyToClipboard(ticket.name, ticket.name)"
+        >#{{ ticket.name }}
+      </span>
+      <Dropdown
+        v-if="showMergeOption"
+        :options="[
+          {
+            label: 'Merge Ticket',
+            onClick: () => (showMergeModal = true),
+            icon: LucideMerge,
+            condition: () => !ticket.is_merged,
+          },
+        ]"
       >
+        <Button icon="more-horizontal" class="text-gray-600" variant="ghost" />
+      </Dropdown>
     </div>
     <TicketAgentContact
       :contact="ticket.contact"
@@ -12,50 +29,53 @@
     <!-- feedback component -->
     <TicketFeedback
       v-if="ticket.feedback_rating"
-      class="border-b px-6 py-3 text-base text-gray-600"
+      class="py-3 !px-6 !gap-3 text-base text-gray-600"
       :ticket="ticket"
     />
     <!-- ticket details -->
-    <TicketAgentDetails
-      :agreement-status="ticket.agreement_status"
-      :first-responded-on="ticket.first_responded_on"
-      :response-by="ticket.response_by"
-      :resolution-date="ticket.resolution_date"
-      :resolution-by="ticket.resolution_by"
-      :ticket-created-on="ticket.creation"
-      :source="ticket.via_customer_portal ? 'Portal' : 'Mail'"
-    />
+    <TicketAgentDetails :ticket="ticket" />
     <!-- fields -->
     <TicketAgentFields :ticket="ticket" @update="update" />
+    <TicketMergeModal
+      :ticket="ticket"
+      v-if="showMergeModal"
+      v-model="showMergeModal"
+      @update="emit('reload')"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import TicketAgentDetails from "./TicketAgentDetails.vue";
 import TicketAgentContact from "./TicketAgentContact.vue";
 import TicketAgentFields from "./TicketAgentFields.vue";
-import { createToast } from "@/utils";
+import TicketMergeModal from "./TicketMergeModal.vue";
+import LucideMerge from "~icons/lucide/merge";
+import { copyToClipboard } from "@/utils";
+import { Ticket } from "@/types";
+import { computed } from "vue";
 
-const props = defineProps({
-  ticket: {
-    type: Object,
-    required: true,
-  },
-});
+interface Props {
+  ticket: Ticket;
+}
 
-const emit = defineEmits(["update", "email:open"]);
+const props = defineProps<Props>();
 
-function update(val) {
+const emit = defineEmits(["update", "email:open", "reload"]);
+
+function update(val = null) {
+  if (val.value && typeof val.value === "object") {
+    val.value = val.value.target?.value || null;
+  }
   emit("update", val);
 }
 
-function copyToClipboard() {
-  navigator.clipboard.writeText(`${props.ticket.name}`);
-  createToast({
-    title: "Copied to clipboard",
-    text: props.ticket.name,
-    icon: "check",
-    iconClasses: "text-green-600",
-  });
-}
+const showMergeModal = ref(false);
+
+const showMergeOption = computed(() => {
+  return (
+    !props.ticket.is_merged && ["Open", "Replied"].includes(props.ticket.status)
+  );
+});
 </script>

@@ -1,7 +1,9 @@
 from datetime import datetime
 
 import frappe
-from frappe.permissions import add_permission
+from frappe.permissions import add_permission, update_permission_property
+
+from helpdesk.consts import DEFAULT_ARTICLE_CATEGORY
 
 from .default_template import create_default_template
 from .file import create_helpdesk_folder
@@ -10,16 +12,13 @@ from .ticket_type import create_fallback_ticket_type, create_ootb_ticket_types
 from .welcome_ticket import create_welcome_ticket
 
 
-def before_install():
-    add_support_redirect_to_tickets()
-
-
 def after_install():
     add_default_categories_and_articles()
     add_default_ticket_priorities()
     add_default_sla()
     add_default_agent_groups()
     update_agent_role_permissions()
+    add_agent_manager_permissions()
     add_default_assignment_rule()
     add_system_preset_filters()
     create_default_template()
@@ -31,39 +30,23 @@ def after_install():
     add_property_setter()
 
 
-def add_support_redirect_to_tickets():
-    website_settings = frappe.get_doc("Website Settings")
-
-    for route_redirects in website_settings.route_redirects:
-        if route_redirects.source == "support":
-            return
-
-    website_settings.append(
-        "route_redirects",
-        {
-            "source": "support",
-            "target": "support/tickets",
-            "redirect_http_status": 301,
-        },
-    )
-    website_settings.save()
-
-
 def add_default_categories_and_articles():
-    category = frappe.get_doc(
-        {
-            "doctype": "HD Article Category",
-            "category_name": "Getting Started",
-            "description": "Content for your Category",
-        }
-    ).insert()
-
+    category = frappe.db.exists("HD Article Category", DEFAULT_ARTICLE_CATEGORY)
+    if not category:
+        category = frappe.get_doc(
+            {
+                "doctype": "HD Article Category",
+                "category_name": DEFAULT_ARTICLE_CATEGORY,
+            }
+        ).insert()
+        category = category.name
+    # TODO: create 4 articles sharing information about helpdesk
     frappe.get_doc(
         {
             "doctype": "HD Article",
             "title": "Introduction",
             "content": "Content for your Article",
-            "category": category.name,
+            "category": category,
             "published": False,
         }
     ).insert()
@@ -72,9 +55,9 @@ def add_default_categories_and_articles():
 def add_default_sla():
 
     add_default_ticket_priorities()
-    add_default_holidy_list()
-    enable_track_service_level_agreement_in_support_settings()
-
+    add_default_holiday_list()
+    if frappe.db.exists("HD Service Level Agreement", "Default"):
+        return
     sla_doc = frappe.new_doc("HD Service Level Agreement")
 
     sla_doc.service_level = "Default"
@@ -166,7 +149,9 @@ def add_default_sla():
     sla_doc.insert()
 
 
-def add_default_holidy_list():
+def add_default_holiday_list():
+    if frappe.db.exists("HD Service Holiday List", "Default"):
+        return
     frappe.get_doc(
         {
             "doctype": "HD Service Holiday List",
@@ -177,15 +162,6 @@ def add_default_holidy_list():
             ),
         }
     ).insert()
-
-    frappe.db.commit()
-
-
-def enable_track_service_level_agreement_in_support_settings():
-    support_settings = frappe.get_doc("HD Settings")
-    support_settings.track_service_level_agreement = True
-    support_settings.save()
-    frappe.db.commit()
 
 
 def add_default_ticket_priorities():
@@ -233,6 +209,21 @@ def update_agent_role_permissions():
         add_permission("File", "Agent", 0)
         add_permission("Contact", "Agent", 0)
         add_permission("Email Account", "Agent", 0)
+        add_permission("Communication", "Agent", 0)
+
+
+def add_agent_manager_permissions():
+    if not frappe.db.exists("Role", "Agent Manager"):
+        return
+
+    ptype = ["create", "delete", "write"]
+    doctypes = ["Email Account", "File", "Contact", "Communication"]
+    for dt in doctypes:
+        # this adds read permission to the role
+        add_permission(dt, "Agent Manager")
+        for p in ptype:
+            # now we update the above role to have all permissions from the ptype
+            update_permission_property(dt, "Agent Manager", 0, p, 1)
 
 
 def add_default_assignment_rule():

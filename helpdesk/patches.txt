@@ -18,3 +18,6 @@ helpdesk.patches.create_helpdesk_folder
 helpdesk.helpdesk.doctype.hd_ticket.patches.feedback_in_master
 helpdesk.helpdesk.doctype.hd_ticket.patches.first_responded_on
 helpdesk.patches.update_hd_team_users
+helpdesk.patches.default_article_category #v2
+helpdesk.patches.communication_read_perm_agent
+helpdesk.patches.agent_manager_perms
