@@ -1,188 +1,93 @@
 <template>
-  <div class="flex flex-col">
-    <LayoutHeader v-if="ticket.data">
-      <template #left-header>
-        <Breadcrumbs :items="breadcrumbs" class="breadcrumbs">
-          <template #prefix="{ item }">
-            <Icon
-              v-if="item.icon"
-              :icon="item.icon"
-              class="mr-1 h-4 flex items-center justify-center self-center"
-            />
-          </template>
-        </Breadcrumbs>
-      </template>
-      <template #right-header>
-        <CustomActions
-          v-if="ticket.data._customActions"
-          :actions="ticket.data._customActions"
-        />
-        <div v-if="ticket.data.assignees?.length">
-          <component :is="ticket.data.assignees.length == 1 ? 'Button' : 'div'">
-            <MultipleAvatar
-              :avatars="ticket.data.assignees"
-              @click="showAssignmentModal = true"
-            />
-          </component>
-        </div>
-        <button
-          v-else
-          class="rounded bg-gray-100 px-2 py-1.5 text-base text-gray-800"
-          @click="showAssignmentModal = true"
-        >
-          Assign
-        </button>
-        <Dropdown :options="dropdownOptions">
-          <template #default="{ open }">
-            <Button :label="ticket.data.status">
-              <template #prefix>
-                <IndicatorIcon
-                  :class="ticketStatusStore.textColorMap[ticket.data.status]"
-                />
-              </template>
-              <template #suffix>
-                <FeatherIcon
-                  :name="open ? 'chevron-up' : 'chevron-down'"
-                  class="h-4"
-                />
-              </template>
-            </Button>
-          </template>
-        </Dropdown>
-      </template>
-    </LayoutHeader>
-    <div v-if="ticket.data" class="flex h-full overflow-hidden">
-      <div class="flex flex-1 flex-col">
-        <!-- ticket activities -->
-        <div class="overflow-y-hidden flex flex-1 !h-full flex-col">
-          <Tabs v-model="tabIndex" :tabs="tabs">
-            <TabList />
-            <TabPanel v-slot="{ tab }" class="h-full">
-              <TicketAgentActivities
-                ref="ticketAgentActivitiesRef"
-                :activities="filterActivities(tab.name)"
-                :title="tab.label"
-                :ticket-status="ticket.data?.status"
-                @update="
-                  () => {
-                    ticket.reload();
-                  }
-                "
-                @email:reply="
-                  (e) => {
-                    communicationAreaRef.replyToEmail(e);
-                  }
-                "
-              />
-            </TabPanel>
-          </Tabs>
-        </div>
-        <CommunicationArea
-          ref="communicationAreaRef"
-          v-model="ticket.data"
-          :to-emails="[ticket.data?.raised_by]"
-          :cc-emails="[]"
-          :bcc-emails="[]"
-          :key="ticket.data?.name"
-          @update="
-            () => {
-              ticket.reload();
-              ticketAgentActivitiesRef.scrollToLatestActivity();
-            }
-          "
-        />
+  <div v-if="ticket.doc?.name && feedReady" :key="ticketId" class="flex-1">
+    <TicketHeader :viewers="viewers" />
+    <div class="h-full flex overflow-hidden">
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Tabs & Communication Area -->
+        <TicketActivityPanel />
       </div>
-      <TicketAgentSidebar
-        :ticket="ticket.data"
-        @update="({ field, value }) => updateTicket(field, value)"
-        @email:open="(e) => communicationAreaRef.toggleEmailBox()"
-        @reload="ticket.reload()"
-      />
+
+      <!-- Sidepanel with Resizer -->
+      <TicketSidebar />
     </div>
-    <AssignmentModal
-      v-if="ticket.data"
-      v-model="showAssignmentModal"
-      :assignees="ticket.data.assignees"
-      :docname="ticketId"
-      doctype="HD Ticket"
-      @update="
-        () => {
-          ticket.reload();
-        }
-      "
+    <SetContactPhoneModal
+      v-if="ticket.doc.contact"
+      v-model="showPhoneModal"
+      :name="ticket.doc?.contact"
+      @onUpdate="ticket.reload"
     />
-    <!-- Rename Subject Dialog -->
-    <Dialog v-model="showSubjectDialog" :options="{ title: 'Rename Subject' }">
-      <template #body-content>
-        <div class="flex flex-col flex-1 gap-3">
-          <FormControl
-            v-model="renameSubject"
-            type="textarea"
-            size="sm"
-            variant="subtle"
-            :disabled="false"
-          />
-          <Button
-            variant="solid"
-            :loading="isLoading"
-            label="Rename"
-            @click="handleRename"
-          />
-        </div>
-      </template>
-    </Dialog>
+  </div>
+  <div
+    v-else-if="ticket.doc?.name || (!ticket.doc && !ticket.get?.error)"
+    class="grid h-full place-items-center"
+  >
+    <LoadingIndicator class="size-6 text-ink-gray-4" />
+  </div>
+
+  <div v-else class="grid h-full place-items-center px-4 py-20 text-center">
+    <div class="space-y-2">
+      <div class="flex justify-center items-center mx-auto">
+        <TicketIcon class="size-10 text-ink-gray-4" />
+      </div>
+      <div class="text-md-medium text-ink-gray-8">
+        {{ __("Ticket not found") }}
+      </div>
+      <div class="text-center text-p-base text-ink-gray-6 mt-1">
+        {{
+          __("You don't have access to this ticket, or it no longer exists.")
+        }}
+      </div>
+      <Button :route="{ name: 'TicketsAgent' }" variant="subtle">
+        <template #prefix><LucideArrowLeft class="size-4" /></template>
+        {{ __("Back to Tickets") }}
+      </Button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, h, watch, onMounted, onUnmounted, provide } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import LucideArrowLeft from "~icons/lucide/arrow-left";
+import { recordTicketVisit } from "@/components/command-palette/recentTickets";
+import TicketIcon from "@/components/icons/TicketIcon.vue";
+import TicketActivityPanel from "@/components/ticket-agent/TicketActivityPanel.vue";
+import { SHARED_VISIBLE_TYPES } from "@/components/ticket-agent/timeline/TicketTimeline.vue";
+import { useActivityTimeline } from "@framework/ui/ActivityTimeline";
+import TicketHeader from "@/components/ticket-agent/TicketHeader.vue";
+import TicketSidebar from "@/components/ticket-agent/TicketSidebar.vue";
+import SetContactPhoneModal from "@/components/ticket/SetContactPhoneModal.vue";
+import { useActiveViewers } from "@/composables/realtime";
 import {
-  Breadcrumbs,
-  Dropdown,
-  createResource,
-  Dialog,
-  FormControl,
-  Tabs,
-  TabPanel,
-  TabList,
-  call,
-} from "frappe-ui";
-
+  reloadTicket,
+  revalidateTicket,
+  useTicket,
+} from "@/composables/useTicket";
 import {
-  LayoutHeader,
-  MultipleAvatar,
-  AssignmentModal,
-  CommunicationArea,
-  Icon,
-} from "@/components";
-import { TicketAgentActivities, TicketAgentSidebar } from "@/components/ticket";
-import {
-  IndicatorIcon,
-  CommentIcon,
-  ActivityIcon,
-  EmailIcon,
-} from "@/components/icons";
-import { socket } from "@/socket";
-import { useTicketStatusStore } from "@/stores/ticketStatus";
-import { useUserStore } from "@/stores/user";
+  ticketsToNavigate,
+  useTicketNavigation,
+} from "@/composables/useTicketNavigation";
 import { globalStore } from "@/stores/globalStore";
-import { createToast, getIcon } from "@/utils";
-import { setupCustomizations } from "@/composables/formCustomisation";
-import { TabObject, TicketTab, View } from "@/types";
-import { useView } from "@/composables/useView";
-import { ComputedRef } from "vue";
+import { useTelephonyStore } from "@/stores/telephony";
+import {
+  AssigneeSymbol,
+  Customizations,
+  CustomizationSymbol,
+  RecentSimilarTicketsSymbol,
+  Resource,
+  TicketContactSymbol,
+  TicketSymbol,
+} from "@/types";
+import {
+  createResource,
+  LoadingIndicator,
+  toast,
+  usePageMeta,
+} from "frappe-ui";
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import { showCommentBox, showEmailBox } from "./modalStates";
 
-const route = useRoute();
-const router = useRouter();
-
-const ticketStatusStore = useTicketStatusStore();
-const { getUser } = useUserStore();
-const { $dialog } = globalStore();
-const ticketAgentActivitiesRef = ref(null);
-const communicationAreaRef = ref(null);
-const renameSubject = ref("");
-const isLoading = ref(false);
+const telephonyStore = useTelephonyStore();
+const { $socket } = globalStore();
 
 const props = defineProps({
   ticketId: {
@@ -190,261 +95,156 @@ const props = defineProps({
     required: true,
   },
 });
-watch(
-  () => props.ticketId,
-  () => {
-    ticket.reload();
+const route = useRoute();
+const showPhoneModal = ref(false);
+
+// Started here, not in the timeline, so it runs alongside the doc fetch and both
+// sit behind one spinner. Every tab shares this one store.
+const { loading: feedLoading } = useActivityTimeline(
+  "HD Ticket",
+  props.ticketId,
+  SHARED_VISIBLE_TYPES
+);
+// latched: a doc_update reloads the feed, and that must not blank the page
+const feedReady = ref(false);
+
+useTicketNavigation();
+
+const ticketComposable = computed(() => useTicket(props.ticketId));
+const ticket = computed(() => ticketComposable.value.ticket);
+const customizations: Resource<Customizations> = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_ticket.api.get_ticket_customizations",
+  cache: ["HD Ticket", "customizations"],
+  auto: true,
+});
+
+provide(TicketSymbol, ticket);
+
+provide(
+  AssigneeSymbol,
+  computed(() => ticketComposable.value.assignees)
+);
+provide(
+  TicketContactSymbol,
+  computed(() => ticketComposable.value.contact)
+);
+provide(
+  CustomizationSymbol,
+  computed(() => customizations)
+);
+provide(
+  RecentSimilarTicketsSymbol,
+  computed(() => ticketComposable.value.recentSimilarTickets)
+);
+provide("makeCall", () => {
+  if (
+    !ticketComposable.value.contact.data?.mobile_no &&
+    !ticketComposable.value.contact.data?.phone
+  ) {
+    showPhoneModal.value = true;
+    return;
   }
+  telephonyStore.makeCall({
+    number:
+      ticketComposable.value.contact.data?.phone ||
+      ticketComposable.value.contact.data?.mobile_no,
+    doctype: "HD Ticket",
+    docname: props.ticketId,
+  });
+});
+provide("refreshTicket", () => reloadTicket(props.ticketId));
+provide("onCallEnded", () => reloadTicket(props.ticketId));
+
+const viewerComposable = computed(() => useActiveViewers(ticket.value.name));
+const viewers = computed(
+  () => viewerComposable.value.currentViewers[props.ticketId] || []
+);
+const { startViewing, stopViewing } = viewerComposable.value;
+
+// handling for faster navigation between tickets
+watch(
+  () => route.params.ticketId,
+  (newTicketId, oldTicketId) => {
+    if (newTicketId === oldTicketId) return;
+
+    if (oldTicketId) stopViewing(oldTicketId as string);
+    startViewing(newTicketId as string);
+
+    // Switching to an already-visited ticket: show its cached conversation and
+    // refresh it in the background in case it changed while we were elsewhere.
+    if (oldTicketId) revalidateTicket(newTicketId as string);
+  },
+  { immediate: true }
 );
 
-const { findView } = useView("HD Ticket");
+watch(ticket, (ticket) => ticket.markSeen.reload(), { immediate: true });
 
-provide("communicationArea", communicationAreaRef);
-
-const showAssignmentModal = ref(false);
-const showSubjectDialog = ref(false);
-
-const ticket = createResource({
-  url: "helpdesk.helpdesk.doctype.hd_ticket.api.get_one",
-  auto: true,
-  makeParams: () => ({
-    name: props.ticketId,
-  }),
-  transform: (data) => {
-    if (data._assign) {
-      data.assignees = JSON.parse(data._assign).map((assignee) => {
-        return {
-          name: assignee,
-          image: getUser(assignee).user_image,
-          label: getUser(assignee).full_name,
-        };
-      });
-    }
-    renameSubject.value = data.subject;
+// immediate so a store fetched earlier in the session opens the gate right away
+watch(
+  feedLoading,
+  (loading) => {
+    if (!loading) feedReady.value = true;
   },
-  onSuccess: (data) => {
-    document.title = data.subject;
-    setupCustomizations(ticket, {
-      doc: data,
-      call,
-      router,
-      $dialog,
-      updateField,
-      createToast,
-    });
-    // console.log(ticket._customActions);
-  },
-});
-function updateField(name: string, value: string, callback = () => {}) {
-  updateTicket(name, value);
-  callback();
-}
+  { immediate: true }
+);
 
-const breadcrumbs = computed(() => {
-  let items = [{ label: "Tickets", route: { name: "TicketsAgent" } }];
-  if (route.query.view) {
-    const currView: ComputedRef<View> = findView(route.query.view as string);
-    if (currView) {
-      items.push({
-        label: currView.value?.label,
-        icon: getIcon(currView.value?.icon),
-        route: { name: "TicketsAgent", query: { view: currView.value?.name } },
-      });
-    }
-  }
-  items.push({
-    label: ticket.data?.subject,
-    onClick: () => {
-      showSubjectDialog.value = true;
-    },
-  });
-  return items;
-});
+// Feeds the command palette's "Recent" list, which is what an empty Cmd+K shows.
+watch(
+  () => ticket.value?.doc?.subject,
+  (subject) => subject && recordTicketVisit(props.ticketId, subject),
+  { immediate: true }
+);
 
-const handleRename = () => {
-  if (renameSubject.value === ticket.data?.subject) return;
-  updateTicket("subject", renameSubject.value);
-  showSubjectDialog.value = false;
+type TicketUpdateData = {
+  ticket_id: string;
+  user: string;
+  field: string;
+  value: string;
 };
 
-const dropdownOptions = computed(() =>
-  ticketStatusStore.options.map((o) => ({
-    label: o,
-    value: o,
-    onClick: () => updateTicket("status", o),
-    icon: () =>
-      h(IndicatorIcon, {
-        class: ticketStatusStore.textColorMap[o],
-      }),
-  }))
-);
-
-// watch(
-//   () => ticket.data,
-//   (val) => {
-//     console.log("CUSTOM ACTIONSSS");
-//     // console.log(val._customActions);
-//   },
-//   { deep: true }
-// );
-
-const tabIndex = ref(0);
-const tabs: TabObject[] = [
-  {
-    name: "activity",
-    label: "Activity",
-    icon: ActivityIcon,
-  },
-  {
-    name: "email",
-    label: "Emails",
-    icon: EmailIcon,
-  },
-  {
-    name: "comment",
-    label: "Comments",
-    icon: CommentIcon,
-  },
-];
-
-const activities = computed(() => {
-  const emailProps = ticket.data.communications.map((email, idx: number) => {
-    return {
-      subject: email.subject,
-      content: email.content,
-      sender: { name: email.user.email, full_name: email.user.name },
-      to: email.recipients,
-      type: "email",
-      key: email.creation,
-      cc: email.cc,
-      bcc: email.bcc,
-      creation: email.creation,
-      attachments: email.attachments,
-      name: email.name,
-      isFirstEmail: idx === 0,
-    };
-  });
-
-  const commentProps = ticket.data.comments.map((comment) => {
-    return {
-      name: comment.name,
-      type: "comment",
-      key: comment.creation,
-      commentedBy: comment.commented_by,
-      commenter: comment.user.name,
-      creation: comment.creation,
-      content: comment.content,
-      attachments: comment.attachments,
-    };
-  });
-
-  const historyProps = [...ticket.data.history, ...ticket.data.views].map(
-    (h) => {
-      return {
-        type: "history",
-        key: h.creation,
-        content: h.action ? h.action : "viewed this",
-        creation: h.creation,
-        user: h.user.name + " ",
-      };
-    }
-  );
-
-  const sorted = [...emailProps, ...commentProps, ...historyProps].sort(
-    (a, b) => new Date(a.creation) - new Date(b.creation)
-  );
-
-  const data = [];
-  let i = 0;
-
-  while (i < sorted.length) {
-    const currentActivity = sorted[i];
-    if (currentActivity.type === "history") {
-      currentActivity.relatedActivities = [];
-      for (let j = i + 1; j < sorted.length + 1; j++) {
-        const nextActivity = sorted[j];
-        if (nextActivity && nextActivity.type === "history") {
-          currentActivity.relatedActivities.push(nextActivity);
-        } else {
-          data.push(currentActivity);
-          i = j - 1;
-          break;
-        }
-      }
-    } else {
-      data.push(currentActivity);
-    }
-    i++;
-  }
-  return data;
-});
-
-function filterActivities(eventType: TicketTab) {
-  if (eventType === "activity") {
-    return activities.value;
-  }
-  return activities.value.filter((activity) => activity.type === eventType);
-}
-const isErrorTriggered = ref(false);
-function updateTicket(fieldname: string, value: string) {
-  isErrorTriggered.value = false;
-  if (value === ticket.data[fieldname]) return;
-  updateOptimistic(fieldname, value);
-
-  createResource({
-    url: "frappe.client.set_value",
-    params: {
-      doctype: "HD Ticket",
-      name: props.ticketId,
-      fieldname,
-      value,
-    },
-    debounce: 500,
-    auto: true,
-    onSuccess: () => {
-      isLoading.value = false;
-      isErrorTriggered.value = false;
-      ticket.reload();
-    },
-    onError: (error) => {
-      if (isErrorTriggered.value) return;
-      isErrorTriggered.value = true;
-
-      const text = error.exc_type
-        ? (error.messages || error.message || []).join(", ")
-        : error.message;
-      createToast({
-        title: error.exc_type || "Error",
-        text,
-        icon: "alert-triangle",
-        iconClasses: "text-red-500",
-      });
-
-      ticket.reload();
-    },
-  });
-}
-
-function updateOptimistic(fieldname: string, value: string) {
-  ticket.data[fieldname] = value;
-  createToast({
-    title: "Ticket updated",
-    icon: "check",
-    iconClasses: "text-green-600",
-  });
-}
-
 onMounted(() => {
-  socket.on("helpdesk:ticket-update", (ticketID) => {
-    if (ticketID === Number(props.ticketId)) {
-      ticket.reload();
+  // Revisiting a ticket: show the cached conversation immediately and refresh it
+  // in place, since a reply may have arrived while the socket listener was off.
+  revalidateTicket(props.ticketId);
+
+  ticketsToNavigate.update({
+    params: {
+      ticket: props.ticketId,
+      current_view: route.query.view as string,
+    },
+  });
+  ticketsToNavigate.reload();
+
+  $socket.on("ticket_update", (data: TicketUpdateData) => {
+    if (data.ticket_id === ticket.value?.name) {
+      // Notify the user about the update
+      toast.info(`User ${data.user} updated ${data.field} to ${data.value}`);
+    }
+  });
+
+  $socket.on("helpdesk:ticket-update", (data: { ticket_id: string }) => {
+    if (data.ticket_id == props.ticketId) {
+      reloadTicket(props.ticketId);
     }
   });
 });
 
-onUnmounted(() => {
-  document.title = "Helpdesk";
-  socket.off("helpdesk:ticket-update");
+onBeforeUnmount(() => {
+  stopViewing(props.ticketId);
+  showEmailBox.value = false;
+  showCommentBox.value = false;
+
+  $socket.off("ticket_update");
+  $socket.off("helpdesk:ticket-update");
+});
+usePageMeta(() => {
+  if (!ticket.value?.doc?.name) {
+    return { title: props.ticketId };
+  }
+
+  return {
+    title: props.ticketId + " - " + (ticket.value?.doc?.subject ?? ""),
+  };
 });
 </script>
 

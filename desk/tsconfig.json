@@ -2,18 +2,28 @@
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"target": "es2021",
-		"module": "esnext",
-		"moduleResolution":"node",
-		"jsx": "preserve",
+		"allowUnreachableCode": false,
+		"target": "es2022",
+		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"@framework/ui": ["../../frappe/ui/src/index.ts"],
+			"@framework/ui/*": ["../../frappe/ui/src/*"]
 		},
 		"types": [
 			"unplugin-icons/types/vue",
 			"vite/client"
 		],
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"allowUnusedLabels": false,
+		"noUncheckedSideEffectImports": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true
+
 	},
+	"extends":"frappe-ui/tsconfig.base.json",
 	"include": ["src","src/*","src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx","src/**/*.vue"],
 	"exclude": ["node_modules"]
 }
