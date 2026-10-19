@@ -2,11 +2,17 @@
   <div class="flex flex-col">
     <LayoutHeader>
       <template #left-header>
-        <div class="text-lg font-medium text-gray-900">Knowledge Base</div>
+        <div class="text-lg-medium text-ink-gray-9">
+          {{ __("Knowledge Base") }}
+        </div>
       </template>
       <template #right-header>
         <Dropdown :options="headerOptions">
-          <Button label="Add new" variant="solid">
+          <Button
+            :label="__('Create')"
+            variant="solid"
+            class="rtl:flex-row-reverse"
+          >
             <template #prefix>
               <LucidePlus class="h-4 w-4" />
             </template>
@@ -37,34 +43,37 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, reactive, computed, onMounted } from "vue";
-import {
-  usePageMeta,
-  FeatherIcon,
-  Button,
-  Dropdown,
-  createResource,
-  Badge,
-} from "frappe-ui";
-import { useRouter } from "vue-router";
-import {
-  updateCategoryTitle,
-  deleteRes as deleteCategory,
-  newCategory,
-  moveToCategory,
-  deleteArticles,
-  mergeCategory,
-} from "@/stores/knowledgeBase";
-import { globalStore } from "@/stores/globalStore";
-import { capture } from "@/telemetry";
+import Icon from "@/components/Icon.vue";
 import LayoutHeader from "@/components/LayoutHeader.vue";
 import ListViewBuilder from "@/components/ListViewBuilder.vue";
 import CategoryModal from "@/components/knowledge-base/CategoryModal.vue";
-import MoveToCategoryModal from "@/components/knowledge-base/MoveToCategoryModal.vue";
-import { createToast, copyToClipboard } from "@/utils";
-import { Error } from "@/types";
-import LucideMerge from "~icons/lucide/merge";
 import MergeCategoryModal from "@/components/knowledge-base/MergeCategoryModal.vue";
+import MoveToCategoryModal from "@/components/knowledge-base/MoveToCategoryModal.vue";
+import { globalStore } from "@/stores/globalStore";
+import {
+  deleteArticles,
+  deleteRes as deleteCategory,
+  mergeCategory,
+  moveToCategory,
+  newCategory,
+  updateCategoryTitle,
+} from "@/stores/knowledgeBase";
+import { capture } from "@/telemetry";
+import { Error } from "@/types";
+import { copyToClipboard } from "@/utils";
+import {
+  Badge,
+  Button,
+  Dropdown,
+  createResource,
+  toast,
+  usePageMeta,
+} from "frappe-ui";
+import { computed, h, onMounted, reactive, ref } from "vue";
+import { __ } from "@/translation";
+import { useRouter } from "vue-router";
+import LucideMerge from "~icons/lucide/merge";
+import LucideBookOpen from "~icons/lucide/book-open";
 
 const router = useRouter();
 const { $dialog } = globalStore();
@@ -82,7 +91,9 @@ const editTitle = ref(false);
 const showCategoryModal = ref(false);
 const moveToModal = ref(false);
 const mergeModal = ref(false);
-
+const hasActiveFilters = computed(
+  () => Object.keys(listViewRef.value?.list?.params?.filters || {}).length > 0
+);
 const generalCategory = createResource({
   url: "helpdesk.api.knowledge_base.get_general_category",
   auto: true,
@@ -91,8 +102,8 @@ const generalCategory = createResource({
 
 const headerOptions = [
   {
-    label: "Category",
-    icon: "folder",
+    label: __("Category"),
+    icon: "lucide-folder",
     onClick: () => {
       resetState();
       editTitle.value = false;
@@ -100,8 +111,8 @@ const headerOptions = [
     },
   },
   {
-    label: "Article",
-    icon: "file-text",
+    label: __("Article"),
+    icon: "lucide-file-text",
     onClick: () => {
       router.push({
         name: "NewArticle",
@@ -118,8 +129,8 @@ const headerOptions = [
 
 const groupByActions = [
   {
-    label: "Add New Article",
-    icon: "plus",
+    label: __("Add New Article"),
+    icon: "lucide-plus",
     onClick: (groupedRow) => {
       router.push({
         name: "NewArticle",
@@ -133,8 +144,8 @@ const groupByActions = [
     },
   },
   {
-    label: "Edit Title",
-    icon: "edit",
+    label: __("Edit Title"),
+    icon: "lucide-edit",
     onClick: (groupedRow) => {
       editTitle.value = true;
       showCategoryModal.value = true;
@@ -144,7 +155,7 @@ const groupByActions = [
     },
   },
   {
-    label: "Merge",
+    label: __("Merge"),
     icon: LucideMerge,
     onClick: (groupedRow) => {
       mergeModal.value = true;
@@ -153,18 +164,21 @@ const groupByActions = [
     },
   },
   {
-    label: "Share",
-    icon: "link",
+    label: __("Share"),
+    icon: "lucide-link",
     onClick: async ({ group }) => {
       const { label, value } = group;
       const url = new URL(window.location.href);
       url.pathname = `/helpdesk/kb-public/${value}`;
-      await copyToClipboard(url.href, label);
+      await copyToClipboard(
+        url.toString(),
+        __("Category '{0}' link copied to clipboard", [label])
+      );
     },
   },
   {
-    label: "Delete",
-    icon: "trash-2",
+    label: __("Delete"),
+    icon: "lucide-trash-2",
     onClick: (groupedRow) => {
       handleCategoryDelete(groupedRow);
     },
@@ -174,26 +188,28 @@ const groupByActions = [
 const listSelections = ref(new Set());
 const selectBannerActions = [
   {
-    label: "Move To",
-    icon: "corner-up-right",
+    label: __("Move To"),
+    icon: "lucide-corner-up-right",
     onClick: (selections: Set<string>) => {
       listSelections.value = new Set(selections);
       moveToModal.value = true;
     },
   },
   {
-    label: "Delete",
-    icon: "trash-2",
+    label: __("Delete"),
+    icon: "lucide-trash-2",
     onClick: (selections: Set<string>) => {
       listSelections.value = selections;
       $dialog({
-        title: "Delete articles?",
-        message: `Are you sure you want to delete these articles?`,
+        title: __("Delete articles"),
+        message: __("Are you sure you want to delete these articles?"),
         actions: [
           {
-            label: "Confirm",
+            label: __("Delete"),
+            theme: "red",
+            iconLeft: "lucide-trash-2",
             variant: "solid",
-            onClick(close: Function) {
+            onClick({ close }) {
               handleDeleteArticles();
               close();
             },
@@ -216,18 +232,11 @@ function handleMoveToCategory(category: string) {
         listViewRef.value?.reload();
         listViewRef.value?.unselectAll();
         listSelections.value.clear();
-        createToast({
-          title: "Articles moved successfully",
-          icon: "check",
-          iconClasses: "text-green-600",
-        });
+        toast.success(__("Articles moved successfully."));
       },
       onError: (error: Error) => {
-        createToast({
-          title: error?.messages?.[0] || error.message,
-          icon: "x",
-          iconClasses: "text-red-600",
-        });
+        const title = error?.messages?.[0] || error.message;
+        toast.error(title);
         moveToModal.value = false;
       },
     }
@@ -254,11 +263,7 @@ function handleCategoryCreate() {
             isEdit: 1,
           },
         });
-        createToast({
-          title: "Category Created Successfully",
-          icon: "check",
-          iconClasses: "text-green-600",
-        });
+        toast.success(__("Category created successfully."));
         capture("category_created", {
           data: {
             category: category.title,
@@ -266,12 +271,12 @@ function handleCategoryCreate() {
         });
         resetState();
       },
-      onError: (error: string) => {
-        createToast({
-          title: error,
-          icon: "x",
-          iconClasses: "text-red-600",
-        });
+      onError: (error: any) => {
+        const message =
+          error?.messages?.[0] ||
+          error?.message ||
+          __("Failed to create category");
+        toast.error(message);
       },
     }
   );
@@ -296,20 +301,16 @@ function handleCategoryUpdate() {
         listViewRef.value.reload();
         showCategoryModal.value = false;
         editTitle.value = false;
-        createToast({
-          title: "Category Updated Successfully",
-          icon: "check",
-          iconClasses: "text-green-600",
-        });
 
+        toast.success(__("Category updated successfully."));
         resetState();
       },
-      onError: (error: string) => {
-        createToast({
-          title: error,
-          icon: "x",
-          iconClasses: "text-red-600",
-        });
+      onError: (error: any) => {
+        const title =
+          error?.messages?.[0] ||
+          error?.message ||
+          __("Failed to update category.");
+        toast.error(title);
       },
     }
   );
@@ -317,13 +318,15 @@ function handleCategoryUpdate() {
 
 function handleCategoryDelete(groupedRow) {
   $dialog({
-    title: "Delete category?",
-    message: `All articles from this category will move to General category.`,
+    title: __("Delete category?"),
+    message: __(
+      "All articles from this category will move to General category."
+    ),
     actions: [
       {
-        label: "Confirm",
+        label: __("Confirm"),
         variant: "solid",
-        onClick(close: Function) {
+        onClick({ close }: { close: () => void }) {
           deleteCategory.submit(
             {
               doctype: "HD Article Category",
@@ -331,11 +334,7 @@ function handleCategoryDelete(groupedRow) {
             },
             {
               onSuccess: () => {
-                createToast({
-                  title: "Category deleted successfully",
-                  icon: "check",
-                  iconClasses: "text-green-600",
-                });
+                toast.success(__("Category deleted successfully."));
                 listViewRef.value.reload();
               },
             }
@@ -357,11 +356,7 @@ function handleDeleteArticles() {
         listViewRef.value?.reload();
         listViewRef.value?.unselectAll();
         listSelections.value?.clear();
-        createToast({
-          title: "Articles deleted successfully",
-          icon: "check",
-          iconClasses: "text-green-600",
-        });
+        toast.success(__("Articles deleted successfully."));
       },
     }
   );
@@ -376,20 +371,13 @@ function handleMergeCategory(source: string, target: string) {
     {
       onSuccess: () => {
         listViewRef.value.reload();
-        createToast({
-          title: "Category merged successfully",
-          icon: "check",
-          iconClasses: "text-green-600",
-        });
+        toast.success(__("Category merged successfully."));
         mergeModal.value = false;
         resetState();
       },
       onError: (error: Error) => {
-        createToast({
-          title: error?.messages?.[0] || error.message,
-          icon: "x",
-          iconClasses: "text-red-600",
-        });
+        const title = error?.messages?.[0] || error.message;
+        toast.error(title);
       },
     }
   );
@@ -414,8 +402,8 @@ const options = computed(() => {
     columnConfig: {
       title: {
         prefix: () => {
-          return h(FeatherIcon, {
-            name: "file-text",
+          return h(Icon, {
+            icon: "lucide-file-text",
             class: "h-4 w-4 flex-shrink-0 text-ink-gray-6",
           });
         },
@@ -427,6 +415,17 @@ const options = computed(() => {
           });
         },
       },
+    },
+    emptyState: {
+      title: "No articles found",
+      icon: h(LucideBookOpen, {
+        class: "h-10 w-10",
+      }),
+      description: hasActiveFilters.value
+        ? __(
+            "No articles found for the applied filters. Try adjusting or clearing your filters."
+          )
+        : __("No articles found in the following category."),
     },
     rowRoute: {
       name: "Article",
@@ -441,15 +440,15 @@ const options = computed(() => {
 
 const statusMap = {
   Published: {
-    label: "Published",
+    label: __("Published"),
     theme: "green",
   },
   Draft: {
-    label: "Draft",
-    theme: "orange",
+    label: __("Draft"),
+    theme: "amber",
   },
   Archived: {
-    label: "Archived",
+    label: __("Archived"),
     theme: "gray",
   },
 };
@@ -460,7 +459,7 @@ onMounted(() => {
 
 usePageMeta(() => {
   return {
-    title: "Knowledge Base",
+    title: __("Knowledge Base"),
   };
 });
 </script>

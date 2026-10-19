@@ -1,7 +1,50 @@
+import Icon from "@/components/Icon.vue";
 import { Field } from "@/types";
+import { toast } from "frappe-ui";
+import { h, isVNode, type Component } from "vue";
+
+type ToastType = "success" | "error" | "warning" | "info";
+
+// vue-sonner renders the icon through `<component :is>`, so the three shapes
+// beta.24's toast.create took have to arrive as components.
+function resolveIcon(icon: unknown): Component | undefined {
+  if (icon == null) return undefined;
+  if (typeof icon === "string") return () => h(Icon, { icon, class: "size-4" });
+  if (isVNode(icon)) return () => icon;
+  return icon as Component;
+}
+
+/**
+ * `toast.create({ message, ... })` shape kept alive for customer-written form
+ * scripts. frappe-ui v1 dropped `toast.create` for `toast(message, options)`.
+ */
+export function createToast({
+  message,
+  type,
+  icon,
+  ...options
+}: {
+  message: string;
+  type?: ToastType;
+  icon?: unknown;
+  [key: string]: unknown;
+}) {
+  const data: Record<string, unknown> = { ...options };
+  if (icon) data.icon = resolveIcon(icon);
+  if (typeof options.duration === "number") {
+    data.duration = toMilliseconds(options.duration);
+  }
+  return type ? toast[type](message, data) : toast(message, data);
+}
+
+// The old API took seconds, with 0 meaning stay open.
+function toMilliseconds(seconds: number) {
+  return seconds === 0 ? Infinity : seconds * 1000;
+}
 
 export async function setupCustomizations(doc, obj) {
-  let data = doc?.data;
+  // Supporting old format, will have to refactor later
+  let data = doc.data ?? doc;
   if (!data) return;
   if (!data._form_script) return [];
   let actions = [];
@@ -21,10 +64,20 @@ export async function setupCustomizations(doc, obj) {
       parseOnChangeFn(onChangeFieldMap, parsed.onChange);
     }
   }
-  data._customActions = actions;
+  data._customActions = withLegacyGroupOptions(actions);
   if (Object.keys(onChangeFieldMap).length) {
     data._customOnChange = onChangeFieldMap;
   }
+}
+
+// Form scripts written before frappe-ui v1 name a group's children `items`,
+// which the menu no longer reads, so the whole group goes missing.
+function withLegacyGroupOptions(actions: any[]) {
+  return actions.map((action) =>
+    action.items && !action.options
+      ? { ...action, options: action.items }
+      : action
+  );
 }
 
 function parseOnChangeFn(fieldMap: object, currentField: object) {
@@ -52,12 +105,13 @@ export function handleSelectFieldUpdate(
   doc: any,
   oldDoc: any
 ) {
-  if (!filters) {
+  if (!filters || !filters.length) {
     f.options = oldDoc.find((f) => f.fieldname === fieldname).options;
+    f.disabled = true;
   } else {
     f.options = filters.join("\n");
+    f.disabled = false;
   }
-
   // reset dependent field
   doc[fieldname] = "";
 }
@@ -69,11 +123,13 @@ export function handleLinkFieldUpdate(
   doc: any,
   oldDoc: any
 ) {
-  if (!filters) {
+  if (!filters || !filters.length) {
     f.link_filters = oldDoc.find((f) => f.fieldname === fieldname).link_filters;
+    f.disabled = true;
     return;
   }
   f.link_filters = JSON.stringify([[f.options, "name", "in", filters]]);
+  f.disabled = false;
 
   // reset dependent field
   doc[fieldname] = "";
@@ -88,10 +144,35 @@ export function parseField(field, doc) {
       field.required ||
       (field.mandatory_depends_on &&
         evaluateDependsOnValue(field.mandatory_depends_on, doc)),
-    filters: field.link_filters && JSON.parse(field.link_filters),
+    filters: field.link_filters && parseLinkFilters(field.link_filters),
+    disabled: field.disabled,
+    readonly:
+      field.readonly ||
+      (field.read_only_depends_on &&
+        evaluateDependsOnValue(field.read_only_depends_on, doc)),
   };
 }
-function evaluateDependsOnValue(expression, doc) {
+
+/**
+ * Convert `link_filters` from the stored list format to the dict format that
+ * `frappe.desk.search.search_link` expects. Doctypes with a standard query
+ * @example
+ * // in:  '[["User", "name", "in", ["a@x.com", "b@x.com"]]]'
+ * // out: { name: ["in", ["a@x.com", "b@x.com"]] }
+ */
+export function parseLinkFilters(linkFilters: string) {
+  const conditions = JSON.parse(linkFilters);
+  if (!Array.isArray(conditions)) return conditions;
+  return Object.fromEntries(
+    conditions.map((condition) => {
+      const [fieldname, operator, value] =
+        condition.length === 4 ? condition.slice(1) : condition;
+      return [fieldname, operator === "=" ? value : [operator, value]];
+    })
+  );
+}
+
+export function evaluateDependsOnValue(expression, doc) {
   if (!expression) return true;
   let out = null;
   if (expression.substr(0, 5) == "eval:") {
