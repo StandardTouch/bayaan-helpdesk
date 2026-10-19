@@ -5,11 +5,10 @@
     alt="Brand Logo"
     class="h-8 w-8 shrink-0 object-cover"
   />
-  <HDLogo v-else class="h-8 w-8 shrink-0 rounded" />
+  <HDLogo v-else class="h-8 w-8 shrink-0 rounded-4" />
 </template>
 
 <script setup lang="ts">
-import { Avatar } from "frappe-ui";
 import HDLogo from "@/assets/logos/HDLogo.vue";
 
 import { useConfigStore } from "@/stores/config";

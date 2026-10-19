@@ -1,12 +1,14 @@
 <template>
-  <div class="border rounded flex-1 px-3 pt-2.5 shadow bg-white">
+  <div
+    class="border flex-1 px-3 pt-2.5 mb-4 border-transparent bg-surface-base rounded-5 shadow text-base leading-6 transition-all duration-300 ease-in-out"
+  >
     <div class="mb-4 flex items-center justify-between text-base">
       <div class="flex items-center gap-0.5">
         <UserAvatar v-bind="user" size="lg" expand strong :hide-avatar="true" />
-        <Icon icon="lucide:dot" class="text-gray-500" />
-        <Tooltip :text="dayjs(date).long()">
-          <span class="text-gray-600">
-            {{ dayjs.tz(date).fromNow() }}
+        <LucideDot class="text-ink-gray-4 size-4" />
+        <Tooltip :text="dateFormat(date, dateTooltipFormat)">
+          <span class="text-ink-gray-5">
+            {{ timeAgo(date) }}
           </span>
         </Tooltip>
       </div>
@@ -25,12 +27,11 @@
 </template>
 
 <script setup lang="ts">
-import { Tooltip } from "frappe-ui";
-import sanitizeHtml from "sanitize-html";
-import { Icon } from "@iconify/vue";
-import { dayjs } from "@/dayjs";
-import { UserInfo } from "@/types";
 import { AttachmentItem, UserAvatar } from "@/components";
+import { UserInfo } from "@/types";
+import { dateFormat, dateTooltipFormat, timeAgo } from "@/utils";
+import { dayjs, Tooltip } from "frappe-ui";
+import sanitizeHtml from "sanitize-html";
 
 interface Attachment {
   file_name: string;
@@ -56,9 +57,13 @@ function sanitize(html: string) {
   return sanitizeHtml(html, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "video"]),
     allowedAttributes: {
+      "*": ["style", "align", "valign", "width", "height", "bgcolor"],
       a: ["href"],
       video: ["src", "controls"],
       img: ["src"],
+      table: ["border", "cellpadding", "cellspacing", "data-type"],
+      td: ["colspan", "rowspan"],
+      th: ["colspan", "rowspan"],
     },
   });
 }

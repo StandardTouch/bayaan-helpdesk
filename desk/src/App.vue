@@ -1,40 +1,45 @@
 <template>
-  <RouterView class="antialiased" />
-  <Toasts />
-  <KeymapDialog />
+  <FrappeUIProvider>
+    <router-view />
+  </FrappeUIProvider>
   <Dialogs />
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
-import { Toasts } from "frappe-ui";
-import { createToast } from "@/utils";
-import { useConfigStore } from "@/stores/config";
-import KeymapDialog from "@/pages/KeymapDialog.vue";
-import { stopSession } from "@/telemetry";
 import { Dialogs } from "@/components/dialogs";
+import { useConfigStore } from "@/stores/config";
+import { useFavicon } from "@vueuse/core";
+import { FrappeUIProvider, setConfig, toast, useColorScheme } from "frappe-ui";
+import { storeToRefs } from "pinia";
+import { h, onMounted } from "vue";
+import Wifi from "~icons/lucide/wifi";
+import WifiOff from "~icons/lucide/wifi-off";
+import { __ } from "./translation";
+import { isCustomerPortal } from "./utils";
 
-useConfigStore();
+const configStore = useConfigStore();
+const { favicon } = storeToRefs(configStore);
+
+useFavicon(favicon);
+
+if (!localStorage.getItem("theme")) {
+  localStorage.setItem("theme", "light");
+}
+useColorScheme();
 
 onMounted(() => {
   window.addEventListener("online", () => {
-    createToast({
-      title: "You are now online",
-      icon: "wifi",
-      iconClasses: "stroke-green-600",
+    toast(__("You are now online."), {
+      icon: () => h(Wifi, { class: "text-ink-base" }),
     });
   });
 
   window.addEventListener("offline", () => {
-    createToast({
-      title: "You are now offline",
-      icon: "wifi-off",
-      iconClasses: "stroke-red-600",
+    toast(__("You are now offline."), {
+      icon: () => h(WifiOff, { class: "text-ink-base" }),
     });
   });
-});
-
-onUnmounted(() => {
-  stopSession();
+  !isCustomerPortal.value && setConfig("localTimezone", window.timezone?.user);
+  setConfig("systemTimezone", window.timezone?.system || null);
 });
 </script>
