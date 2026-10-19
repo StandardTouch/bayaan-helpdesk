@@ -3,7 +3,7 @@ import frappe
 from helpdesk.utils import is_agent as _is_agent
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_user():
     current_user = frappe.session.user
     filters = {"name": current_user}
@@ -20,17 +20,28 @@ def get_user():
         filters=filters,
         fieldname=fields,
         as_dict=True,
-    )
+    ) or {}
 
-    is_agent = _is_agent()
-    is_admin = ("System Manager" or "Admistrator") in frappe.get_roles(current_user)
-    has_desk_access = is_agent or is_admin
-    user_image = user.user_image
-    user_first_name = user.first_name
-    user_name = user.full_name
-    user_id = user.name
-    username = user.username
-    is_manager = ("Agent Manager") in frappe.get_roles(current_user)
+    if current_user == "Guest":
+        has_desk_access = False
+        is_admin = False
+        is_agent = False
+        is_manager = False
+    else:
+        user_type = frappe.db.get_value("User", current_user, "user_type")
+        roles = set(frappe.get_roles(current_user))
+        portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest"}
+        non_portal_roles = roles - portal_roles
+        is_admin = bool(roles.intersection({"System Manager", "Administrator"})) or current_user == "Administrator"
+        is_agent = _is_agent() and (user_type == "System User" or current_user == "Administrator")
+        has_desk_access = (user_type == "System User" or current_user == "Administrator") and (bool(non_portal_roles) or is_agent or is_admin)
+        is_manager = ("Agent Manager") in roles
+
+    user_image = user.get("user_image")
+    user_first_name = user.get("first_name")
+    user_name = user.get("full_name")
+    user_id = user.get("name") or current_user
+    username = user.get("username")
 
     return {
         "has_desk_access": has_desk_access,
@@ -42,8 +53,28 @@ def get_user():
         "user_first_name": user_first_name,
         "user_name": user_name,
         "username": username,
-        "time_zone": user.time_zone,
+        "time_zone": user.get("time_zone"),
     }
+
+
+@frappe.whitelist(allow_guest=True)
+def get_post_login_redirect():
+    current_user = frappe.session.user
+    if current_user == "Guest":
+        return "/helpdesk/login"
+
+    user_type = frappe.db.get_value("User", current_user, "user_type")
+    roles = set(frappe.get_roles(current_user))
+    portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest"}
+    non_portal_roles = roles - portal_roles
+
+    if user_type != "System User" and current_user != "Administrator" and not non_portal_roles:
+        return "/helpdesk/my-tickets"
+    elif non_portal_roles or user_type == "System User" or current_user == "Administrator":
+        return "/app"
+
+    # Otherwise only helpdesk user role -> customer portal
+    return "/helpdesk/my-tickets"
 
 
 @frappe.whitelist(allow_guest=True)
@@ -61,9 +92,12 @@ def oauth_providers():
     )
 
     for provider in providers:
-        client_secret = get_decrypted_password(
-            "Social Login Key", provider.name, "client_secret"
-        )
+        try:
+            client_secret = get_decrypted_password(
+                "Social Login Key", provider.name, "client_secret"
+            )
+        except Exception:
+            client_secret = None
         if not client_secret:
             continue
 

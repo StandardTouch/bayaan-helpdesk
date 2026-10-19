@@ -66,6 +66,7 @@
                 <!-- ticket contact info -->
                 <TicketAgentContact
                   :contact="ticket.data.contact"
+                  :company="ticket.data.customer"
                   @email:open="communicationAreaRef.toggleEmailBox()"
                 />
                 <!-- feedback component -->

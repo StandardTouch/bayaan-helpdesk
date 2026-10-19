@@ -78,6 +78,16 @@
               </nav>
             </Section>
           </div>
+          <div class="mt-auto p-2 border-t border-gray-200">
+            <SidebarLink
+              :icon="LucideHome"
+              :is-active="false"
+              :is-expanded="true"
+              label="Home Desk"
+              class="text-gray-700 hover:text-black font-medium"
+              :on-click="goToDesk"
+            />
+          </div>
         </div>
       </TransitionChild>
       <TransitionChild
@@ -114,6 +124,7 @@ import { useView, currentView } from "@/composables/useView";
 import { mobileSidebarOpened as sidebarOpened } from "@/composables/mobile";
 
 import LucideBell from "~icons/lucide/bell";
+import LucideHome from "~icons/lucide/home";
 
 import { CUSTOMER_PORTAL_LANDING } from "@/router";
 import Apps from "../Apps.vue";
@@ -182,6 +193,13 @@ function parseViews(views) {
 
 const customerPortalDropdown = computed(() => [
   {
+    label: "Go to Desk",
+    icon: "arrow-up-right",
+    onClick: () => {
+      window.location.href = "/app";
+    },
+  },
+  {
     label: "Log out",
     icon: "log-out",
     onClick: () => authStore.logout(),
@@ -193,22 +211,19 @@ const agentPortalDropdown = computed(() => [
     component: markRaw(Apps),
   },
   {
+    label: "Go to Desk",
+    icon: "arrow-up-right",
+    onClick: () => {
+      window.location.href = "/app";
+    },
+  },
+  {
     label: "Customer portal",
     icon: "users",
     onClick: () => {
       const path = router.resolve({ name: CUSTOMER_PORTAL_LANDING });
       window.open(path.href);
     },
-  },
-  {
-    icon: "life-buoy",
-    label: "Support",
-    onClick: () => window.open("https://t.me/frappedesk"),
-  },
-  {
-    icon: "book-open",
-    label: "Docs",
-    onClick: () => window.open("https://docs.frappe.io/helpdesk"),
   },
   {
     label: "Log out",
@@ -222,6 +237,10 @@ const profileSettings = computed(() => {
     ? customerPortalDropdown.value
     : agentPortalDropdown.value;
 });
+
+function goToDesk() {
+  window.location.href = "/app";
+}
 
 function isActiveTab(to: string) {
   if (route.query.view) {

@@ -8,11 +8,10 @@ const router = useRouter();
 const authStore = useAuthStore();
 const configStore = useConfigStore();
 
-function getTarget() {
-  if (authStore.hasDeskAccess) return AGENT_PORTAL_LANDING;
-  else if (configStore.preferKnowledgeBase) return "CustomerKnowledgeBase";
-  else return CUSTOMER_PORTAL_LANDING;
+if (authStore.hasDeskAccess) {
+  window.location.href = "/app";
+} else {
+  const target = configStore.preferKnowledgeBase ? "CustomerKnowledgeBase" : CUSTOMER_PORTAL_LANDING;
+  router.push({ name: target });
 }
-
-router.push({ name: getTarget() });
 </script>

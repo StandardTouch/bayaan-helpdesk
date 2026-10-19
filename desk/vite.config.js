@@ -41,11 +41,11 @@ export default defineConfig({
       },
       manifest: {
         display: "standalone",
-        name: "Frappe Helpdesk",
-        short_name: "Helpdesk",
+        name: "StandardTouch Helpdesk",
+        short_name: "StandardTouch",
         start_url: "/helpdesk",
         description:
-          "Modern, Streamlined, Free and Open Source Customer Service Software",
+          "StandardTouch Customer Service and Support Software",
         icons: [
           {
             src: "/assets/helpdesk/desk/manifest/manifest-icon-192.maskable.png",

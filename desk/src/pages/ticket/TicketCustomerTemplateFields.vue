@@ -12,6 +12,18 @@
         {{ ticket.data.priority }}
       </span>
     </div>
+    <div class="space-y-1.5" v-if="ticketOpenerName">
+      <span class="block text-sm text-gray-700"> Created By </span>
+      <span class="block break-words text-base font-medium text-gray-900">
+        {{ ticketOpenerName }}
+      </span>
+    </div>
+    <div class="space-y-1.5" v-if="ticketCompanyName">
+      <span class="block text-sm text-gray-700"> Company </span>
+      <span class="block break-words text-base font-medium text-gray-900">
+        {{ ticketCompanyName }}
+      </span>
+    </div>
     <div v-for="data in slaData" :key="data.label" class="space-y-1.5">
       <Tooltip :text="dayjs(data.value).long()">
         <span class="block text-sm text-gray-700">{{ data.title }}</span>
@@ -50,6 +62,19 @@ import { dayjs } from "@/dayjs";
 import { Field } from "@/types";
 
 const ticket = inject(ITicket);
+
+const ticketOpenerName = computed(() => {
+  return (
+    ticket.data.contact?.full_name ||
+    ticket.data.contact?.name ||
+    ticket.data.raised_by?.split("@")[0] ||
+    ""
+  );
+});
+
+const ticketCompanyName = computed(() => {
+  return ticket.data.customer || ticket.data.contact?.company_name || "";
+});
 
 const slaData = computed(() => {
   const responseSla =

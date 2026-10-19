@@ -28,6 +28,7 @@ def after_install():
     create_welcome_ticket()
     create_ticket_feedback_options()
     add_property_setter()
+    ensure_helpdesk_contact_role()
 
 
 def add_default_categories_and_articles():
@@ -210,6 +211,13 @@ def update_agent_role_permissions():
         add_permission("Contact", "Agent", 0)
         add_permission("Email Account", "Agent", 0)
         add_permission("Communication", "Agent", 0)
+
+
+def ensure_helpdesk_contact_role():
+    if frappe.db.exists("Role", "Helpdesk Contact"):
+        role = frappe.get_doc("Role", "Helpdesk Contact")
+        role.desk_access = 0
+        role.save(ignore_permissions=True)
 
 
 def add_agent_manager_permissions():

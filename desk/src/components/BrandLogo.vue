@@ -2,16 +2,14 @@
   <img
     v-if="config.brandLogo"
     :src="config.brandLogo"
-    alt="Brand Logo"
-    class="h-8 w-8 shrink-0 object-cover"
+    alt="StandardTouch Logo"
+    class="h-8 w-8 shrink-0 object-cover rounded"
   />
-  <HDLogo v-else class="h-8 w-8 shrink-0 rounded" />
+  <StandardTouchIcon v-else class="h-8 w-8 shrink-0 rounded" />
 </template>
 
 <script setup lang="ts">
-import { Avatar } from "frappe-ui";
-import HDLogo from "@/assets/logos/HDLogo.vue";
-
+import StandardTouchIcon from "@/assets/logos/StandardTouchIcon.vue";
 import { useConfigStore } from "@/stores/config";
 const config = useConfigStore();
 </script>

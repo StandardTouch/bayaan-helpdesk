@@ -24,6 +24,7 @@ from helpdesk.helpdesk.doctype.hd_ticket_activity.hd_ticket_activity import (
 from helpdesk.helpdesk.utils.email import (
     default_outgoing_email_account,
     default_ticket_outgoing_email_account,
+    get_helpdesk_email_account,
 )
 from helpdesk.search import HelpdeskSearch
 from helpdesk.utils import capture_event, get_customer, is_agent, publish_event
@@ -47,15 +48,13 @@ class HDTicket(Document):
         self.check_update_perms()
         self.set_ticket_type()
         self.set_raised_by()
+        self.set_contact()
+        self.set_customer()
         self.set_priority()
         self.set_first_responded_on()
         self.set_feedback_values()
         self.apply_escalation_rule()
         self.set_sla()
-
-        if self.via_customer_portal:
-            self.set_contact()
-            self.set_customer()
 
     def validate(self):
         self.validate_feedback()
@@ -77,6 +76,7 @@ class HDTicket(Document):
         publish_event("helpdesk:new-ticket", {"name": self.name})
         if self.get("description"):
             self.create_communication_via_contact(self.description, new_ticket=True)
+        self.send_creation_acknowledgement_to_customer()
 
     def on_update(self):
         # flake8: noqa
@@ -143,8 +143,12 @@ class HDTicket(Document):
             customer = get_customer(self.contact)
 
             # let agent assign the customer when one contact has more than one customer
-            if len(customer) == 1:
+            if len(customer) >= 1:
                 self.customer = customer[0]
+            elif not self.customer:
+                company = frappe.db.get_value("Contact", self.contact, "company_name")
+                if company:
+                    self.customer = company
 
     def set_priority(self):
         if self.priority:
@@ -384,6 +388,9 @@ class HDTicket(Document):
 
         :return: `Email Account`
         """
+        if email_account := get_helpdesk_email_account():
+            return email_account
+
         if email_account := self.last_communication_email():
             return email_account
 
@@ -613,6 +620,69 @@ class HDTicket(Document):
             )
         except Exception as e:
             frappe.throw(_(e))
+
+    def send_creation_acknowledgement_to_customer(self):
+        if self.skip_email_workflow():
+            return
+
+        # Check if acknowledgement is enabled in settings
+        enabled = frappe.db.get_single_value(
+            "HD Email Settings", "send_ticket_acknowledgement"
+        )
+        if enabled is not None and not enabled:
+            return
+
+        sender_account = self.sender_email()
+        if not sender_account:
+            return
+
+        recipient = self.raised_by
+        if not recipient or recipient == "Administrator":
+            return
+
+        customer_name = (
+            frappe.db.get_value("User", recipient, "full_name")
+            or frappe.db.get_value("Contact", {"email_id": recipient}, "first_name")
+            or recipient
+        )
+
+        subject_template = (
+            frappe.db.get_single_value(
+                "HD Email Settings", "acknowledgement_subject"
+            )
+            or "We received your ticket: [#{name}] {subject}"
+        )
+        try:
+            subject = subject_template.format(name=self.name, subject=self.subject)
+        except Exception:
+            subject = f"[{self.name}] We received your ticket: {self.subject}"
+
+        args = {
+            "ticket_id": self.name,
+            "subject": self.subject,
+            "status": self.status,
+            "priority": self.priority or "Normal",
+            "customer_name": customer_name,
+            "portal_link": self.portal_uri,
+        }
+
+        try:
+            frappe.sendmail(
+                recipients=recipient,
+                sender=sender_account.email_id,
+                reply_to=sender_account.email_id,
+                subject=subject,
+                template="ticket_created_acknowledgement",
+                args=args,
+                reference_doctype="HD Ticket",
+                reference_name=self.name,
+                now=self.instantly_send_email(),
+            )
+        except Exception as e:
+            frappe.log_error(
+                title=f"Failed to send acknowledgement for HD Ticket {self.name}",
+                message=str(e),
+            )
 
     @frappe.whitelist()
     def mark_seen(self):

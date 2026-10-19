@@ -1,10 +1,12 @@
 <template>
   <div
-    class="-all flex h-7 cursor-pointer items-center rounded pl-2 pr-1 text-gray-800 duration-300 ease-in-out"
+    class="flex cursor-pointer items-center duration-200 ease-in-out transition-all"
     :class="{
-      'w-full': isExpanded,
-      'w-8': !isExpanded,
-      'shadow-sm': isActive,
+      'w-full h-8 pl-2.5 pr-2 rounded-md': isExpanded,
+      'w-8.5 h-8.5 mx-auto justify-center px-0 rounded-md': !isExpanded,
+      'shadow-xs bg-white text-[#ED1D24] font-semibold': isActive,
+      'border-l-2 border-[#ED1D24]': isActive && isExpanded,
+      'text-gray-800': !isActive,
       [bgColor]: isActive,
       [hvColor]: !isActive,
     }"
@@ -12,9 +14,10 @@
   >
     <Tooltip :text="label" v-if="!isExpanded">
       <span
-        class="shrink-0 text-gray-700"
+        class="flex items-center justify-center shrink-0"
         :class="{
-          'text-gray-900': !isExpanded,
+          'text-[#ED1D24]': isActive,
+          'text-gray-700': !isActive,
           'icon-emoji': isMobileView,
         }"
       >
@@ -24,9 +27,10 @@
     </Tooltip>
     <span
       v-else
-      class="shrink-0 text-gray-700"
+      class="flex items-center justify-center shrink-0"
       :class="{
-        'text-gray-900': !isExpanded,
+        'text-[#ED1D24]': isActive,
+        'text-gray-700': !isActive,
         'icon-emoji': isMobileView,
       }"
     >
@@ -35,14 +39,10 @@
     </span>
 
     <div
-      class="-all ml-2 flex shrink-0 grow items-center justify-between text-sm duration-300 ease-in-out"
-      :class="{
-        'opacity-100': isExpanded,
-        'opacity-0': !isExpanded,
-        '-z-50': !isExpanded,
-      }"
+      v-if="isExpanded"
+      class="ml-2 flex shrink-0 grow items-center justify-between text-sm whitespace-nowrap overflow-hidden transition-opacity duration-200"
     >
-      {{ label }}
+      <span class="truncate">{{ label }}</span>
       <slot name="right" />
     </div>
   </div>

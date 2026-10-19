@@ -1,12 +1,13 @@
 <template>
   <div
-    class="z-0 flex select-none flex-col border-r border-gray-200 bg-gray-50 p-2 text-base duration-300 ease-in-out"
+    class="z-0 flex select-none flex-col border-r border-gray-200 bg-gray-50 p-2 text-base duration-300 ease-in-out overflow-x-hidden"
     :style="{
       'min-width': width,
       'max-width': width,
+      width: width,
     }"
   >
-    <UserMenu class="mb-2 ml-0.5" :options="profileSettings" />
+    <UserMenu class="mb-2" :class="{ 'ml-0.5': isExpanded }" :options="profileSettings" />
     <SidebarLink
       v-if="!isCustomerPortal"
       label="Search"
@@ -48,11 +49,11 @@
         </template>
       </SidebarLink>
     </div>
-    <div class="overflow-y-auto">
+    <div class="overflow-y-auto overflow-x-hidden">
       <div v-for="view in allViews" :key="view.label">
         <div
           v-if="!view.hideLabel && !isExpanded && view.views?.length"
-          class="mx-2 my-2 h-1"
+          class="mx-auto my-2 h-px w-6 bg-gray-200"
         />
         <Section
           :label="view.label"
@@ -100,6 +101,14 @@
       :isSidebarCollapsed="!isExpanded"
     />
     <SidebarLink
+      :icon="LucideHome"
+      :is-active="false"
+      :is-expanded="isExpanded"
+      label="Home Desk"
+      class="mb-1 text-gray-700 hover:text-black font-medium"
+      :on-click="goToDesk"
+    />
+    <SidebarLink
       :icon="isExpanded ? LucideArrowLeftFromLine : LucideArrowRightFromLine"
       :is-active="false"
       :is-expanded="isExpanded"
@@ -126,6 +135,7 @@ import LucideArrowLeftFromLine from "~icons/lucide/arrow-left-from-line";
 import LucideArrowRightFromLine from "~icons/lucide/arrow-right-from-line";
 import LucideBell from "~icons/lucide/bell";
 import LucideSearch from "~icons/lucide/search";
+import LucideHome from "~icons/lucide/home";
 import SettingsModal from "@/components/Settings/SettingsModal.vue";
 import Apps from "@/components/Apps.vue";
 import { isCustomerPortal } from "@/utils";
@@ -210,6 +220,13 @@ function parseViews(views) {
 
 const customerPortalDropdown = computed(() => [
   {
+    label: "Go to Desk",
+    icon: "arrow-up-right",
+    onClick: () => {
+      window.location.href = "/app";
+    },
+  },
+  {
     label: "Log out",
     icon: "log-out",
     onClick: () => authStore.logout(),
@@ -221,28 +238,19 @@ const agentPortalDropdown = computed(() => [
     component: markRaw(Apps),
   },
   {
+    label: "Go to Desk",
+    icon: "arrow-up-right",
+    onClick: () => {
+      window.location.href = "/app";
+    },
+  },
+  {
     label: "Customer portal",
     icon: "users",
     onClick: () => {
       const path = router.resolve({ name: CUSTOMER_PORTAL_LANDING });
       window.open(path.href);
     },
-  },
-  {
-    icon: "life-buoy",
-    label: "Support",
-    onClick: () => window.open("https://t.me/frappedesk"),
-  },
-  {
-    icon: "book-open",
-    label: "Docs",
-    onClick: () => window.open("https://docs.frappe.io/helpdesk"),
-  },
-  {
-    label: "Login to Frappe Cloud",
-    icon: FrappeCloudIcon,
-    onClick: () => confirmLoginToFrappeCloud(),
-    condition: () => !isMobileView.value && window.is_fc_site,
   },
   {
     label: "Settings",
@@ -268,6 +276,10 @@ function isActiveTab(to: any) {
     return route.query.view == to?.query?.view;
   }
   return route.name === to;
+}
+
+function goToDesk() {
+  window.location.href = "/app";
 }
 
 function openCommandPalette() {

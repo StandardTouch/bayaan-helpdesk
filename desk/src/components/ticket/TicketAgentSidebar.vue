@@ -24,6 +24,7 @@
     </div>
     <TicketAgentContact
       :contact="ticket.contact"
+      :company="ticket.customer"
       @email:open="(e) => emit('email:open', e)"
     />
     <!-- feedback component -->

@@ -53,6 +53,8 @@ def get_one(name, is_customer_portal=False):
             QBContact.image,
             QBContact.mobile_no,
             QBContact.name,
+            QBContact.first_name,
+            QBContact.last_name,
             QBContact.phone,
         )
         .where(QBContact.name == ticket.contact)
@@ -60,10 +62,35 @@ def get_one(name, is_customer_portal=False):
     )
     if contact:
         contact = contact[0]
+        first = contact.get("first_name") or ""
+        last = contact.get("last_name") or ""
+        full = f"{first} {last}".strip()
+        contact["full_name"] = full or contact.get("name")
+        if not contact.get("company_name") and ticket.get("customer"):
+            contact["company_name"] = ticket.get("customer")
     else:
+        user_info = (
+            frappe.db.get_value(
+                "User",
+                {"email": ticket.raised_by},
+                ["first_name", "last_name", "full_name", "user_image"],
+                as_dict=True,
+            )
+            or {}
+        )
+        first = user_info.get("first_name") or ""
+        last = user_info.get("last_name") or ""
+        full = (
+            user_info.get("full_name")
+            or f"{first} {last}".strip()
+            or ticket.raised_by.split("@")[0]
+        )
         contact = {
             "email_id": ticket.raised_by,
-            "name": ticket.raised_by.split("@")[0],
+            "name": full,
+            "full_name": full,
+            "image": user_info.get("user_image"),
+            "company_name": ticket.get("customer") or "",
         }
     template = ticket.template or DEFAULT_TICKET_TEMPLATE
     return {

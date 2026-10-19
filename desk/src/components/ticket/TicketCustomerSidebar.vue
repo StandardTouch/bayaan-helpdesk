@@ -10,16 +10,21 @@
       <div class="flex gap-2">
         <Avatar
           size="2xl"
-          :image="ticket.data.contact.image"
-          :label="ticket.data.contact.name"
+          :image="ticket.data.contact?.image"
+          :label="ticketOpenerName"
         />
-        <div class="flex items-center justify-between">
-          <Tooltip :text="ticket.data.contact.name">
-            <div class="w-[242px] truncate text-2xl font-medium">
-              {{ ticket.data.contact.name }}
+        <div class="flex items-center justify-between flex-1">
+          <div class="flex-1 min-w-0 pr-2">
+            <Tooltip :text="ticketOpenerName">
+              <div class="truncate text-xl font-medium text-gray-900">
+                {{ ticketOpenerName }}
+              </div>
+            </Tooltip>
+            <div v-if="ticketCompanyName" class="text-xs text-gray-500 font-semibold truncate mt-0.5">
+              {{ ticketCompanyName }}
             </div>
-          </Tooltip>
-          <div class="flex gap-1.5" v-if="!ticket.data.feedback_rating">
+          </div>
+          <div class="flex gap-1.5" v-if="!ticket.data.feedback_rating && ticket.data.contact?.email_id">
             <Tooltip :text="ticket.data.contact.email_id">
               <Button class="h-7 w-7" @click="emit('open')">
                 <EmailIcon class="h-4 w-4" />
@@ -33,6 +38,7 @@
       <div
         class="flex items-center text-base leading-5"
         v-for="field in ticketBasicInfo"
+        :key="field.label"
       >
         <span class="w-[126px] text-sm text-gray-600">{{ field.label }}</span>
         <span class="text-base text-gray-800 flex-1">
@@ -174,17 +180,43 @@ function resolutionData() {
   return resolution;
 }
 
-const ticketBasicInfo = computed(() => [
-  {
-    label: "Ticket ID",
-    value: ticket.data.name,
-  },
-  {
-    label: "Status",
-    value: transformStatus(ticket.data.status),
-    bold: true,
-  },
-]);
+const ticketOpenerName = computed(() => {
+  return (
+    ticket.data.contact?.full_name ||
+    ticket.data.contact?.name ||
+    ticket.data.raised_by?.split("@")[0] ||
+    "Customer"
+  );
+});
+
+const ticketCompanyName = computed(() => {
+  return ticket.data.customer || ticket.data.contact?.company_name || "";
+});
+
+const ticketBasicInfo = computed(() => {
+  const info = [
+    {
+      label: "Ticket ID",
+      value: ticket.data.name,
+    },
+    {
+      label: "Status",
+      value: transformStatus(ticket.data.status),
+      bold: true,
+    },
+    {
+      label: "Raised By",
+      value: ticketOpenerName.value,
+    },
+  ];
+  if (ticketCompanyName.value) {
+    info.push({
+      label: "Company",
+      value: ticketCompanyName.value,
+    });
+  }
+  return info;
+});
 
 const ticketAdditionalInfo = computed(() => {
   const fields = [

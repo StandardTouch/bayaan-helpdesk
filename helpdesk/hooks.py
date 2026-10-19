@@ -19,6 +19,7 @@ add_to_apps_screen = [
 
 after_install = "helpdesk.setup.install.after_install"
 after_migrate = [
+    "helpdesk.setup.install.ensure_helpdesk_contact_role",
     "helpdesk.search.build_index_in_background",
     "helpdesk.search.download_corpus",
 ]
@@ -32,11 +33,18 @@ scheduler_events = {
 }
 
 
+home_page = "helpdesk"
+website_user_home_page = "helpdesk"
+
 website_route_rules = [
-    {
-        "from_route": "/helpdesk/<path:app_path>",
-        "to_route": "helpdesk",
-    },
+    {"from_route": "/helpdesk/<path:app_path>", "to_route": "helpdesk"},
+    {"from_route": "/signup", "to_route": "helpdesk"},
+    {"from_route": "/frappe/signup", "to_route": "helpdesk"},
+]
+
+website_redirects = [
+    {"source": r"/signup", "target": "/helpdesk/signup"},
+    {"source": r"/frappe/signup", "target": "/helpdesk/signup"},
 ]
 
 doc_events = {
@@ -45,6 +53,9 @@ doc_events = {
     },
     "Assignment Rule": {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
+    },
+    "User": {
+        "after_insert": "helpdesk.api.account.on_user_insert",
     },
 }
 
@@ -73,7 +84,3 @@ ignore_links_on_delete = [
 # setup_wizard_stages = "helpdesk.setup.setup_wizard.get_setup_stages"
 setup_wizard_complete = "helpdesk.setup.setup_wizard.setup_complete"
 
-
-website_route_rules = [
-    {"from_route": "/helpdesk/<path:app_path>", "to_route": "helpdesk"},
-]

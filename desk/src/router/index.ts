@@ -16,7 +16,7 @@ export const AGENT_PORTAL_KNOWLEDGE_BASE = "DeskKBHome";
 
 export const CUSTOMER_PORTAL_LANDING = "TicketsCustomer";
 export const AGENT_PORTAL_LANDING = AGENT_PORTAL_TICKET_LIST;
-export const LOGIN_PAGE = "/login?redirect-to=/helpdesk";
+export const LOGIN_PAGE = "/helpdesk/login";
 
 // type the meta fields
 declare module "vue-router" {
@@ -31,6 +31,36 @@ declare module "vue-router" {
 }
 
 const routes = [
+  {
+    path: "/signup",
+    name: "Signup",
+    component: () => import("@/pages/Signup.vue"),
+    props: { defaultMode: "signup" },
+    meta: {
+      auth: false,
+      public: true,
+    },
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("@/pages/Signup.vue"),
+    props: { defaultMode: "signin" },
+    meta: {
+      auth: false,
+      public: true,
+    },
+  },
+  {
+    path: "/forgot-password",
+    name: "ForgotPassword",
+    component: () => import("@/pages/Signup.vue"),
+    props: { defaultMode: "forgot" },
+    meta: {
+      auth: false,
+      public: true,
+    },
+  },
   {
     path: "",
     component: () => import("@/pages/HRoot.vue"),
@@ -204,11 +234,47 @@ router.beforeEach(async (to, _, next) => {
   const authStore = useAuthStore();
   isCustomerPortal.value = to.meta.public;
   if (authStore.isLoggedIn) {
-    await authStore.init();
+    try {
+      await authStore.init();
+    } catch (e) {
+      console.warn("Auth init error:", e);
+    }
+  }
+
+  if (
+    to.name === "Signup" ||
+    to.name === "Login" ||
+    to.name === "ForgotPassword" ||
+    to.path === "/signup" ||
+    to.path === "/login" ||
+    to.path === "/forgot-password"
+  ) {
+    if (authStore.isLoggedIn) {
+      if (authStore.hasDeskAccess) {
+        window.location.href = "/app";
+        return;
+      } else {
+        next({ path: "/my-tickets" });
+        return;
+      }
+    } else {
+      next();
+    }
+    return;
+  }
+
+  if (
+    authStore.isLoggedIn &&
+    authStore.hasDeskAccess &&
+    (to.path === "/" || to.path === "" || to.name === "CustomerRoot")
+  ) {
+    window.location.href = "/app";
+    return;
   }
 
   if (!authStore.isLoggedIn) {
-    window.location.href = LOGIN_PAGE;
+    next({ name: "Signup" });
+    return;
   } else if (to.name === "TicketAgent" && !authStore.isAgent) {
     const ticketId = to.params.ticketId;
     next({

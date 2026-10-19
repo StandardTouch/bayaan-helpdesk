@@ -19,7 +19,7 @@ def get_credentials():
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_posthog_settings():
     return {
         "posthog_project_id": frappe.conf.get(POSTHOG_PROJECT_FIELD),

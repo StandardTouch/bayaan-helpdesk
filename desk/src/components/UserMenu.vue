@@ -2,10 +2,10 @@
   <Dropdown :options="options">
     <template #default="{ open }">
       <button
-        class="flex h-12 items-center rounded-md py-2 duration-300 ease-in-out"
+        class="flex h-12 items-center rounded-md py-2 duration-300 ease-in-out cursor-pointer border-0 bg-transparent"
         :class="
           !sidebarStore.isExpanded
-            ? 'w-auto px-0'
+            ? 'w-full justify-center px-0'
             : open
             ? 'w-52 bg-white px-2 shadow-sm'
             : 'w-52 px-2 hover:bg-gray-200'
@@ -13,27 +13,19 @@
       >
         <BrandLogo />
         <div
-          class="flex flex-1 flex-col text-left duration-300 ease-in-out"
-          :class="
-            !sidebarStore.isExpanded
-              ? 'ml-0 w-0 overflow-hidden opacity-0'
-              : 'ml-2 w-auto opacity-100'
-          "
+          v-if="sidebarStore.isExpanded"
+          class="flex flex-1 flex-col text-left ml-2 duration-300 ease-in-out overflow-hidden"
         >
-          <div class="text-base font-medium leading-none text-gray-900">
-            Helpdesk
+          <div class="text-sm font-bold leading-none font-heading tracking-tight truncate">
+            <span class="text-[#ED1D24]">Standard</span><span class="text-gray-900">Touch</span>
           </div>
-          <div class="mt-1 text-sm leading-none text-gray-700">
-            {{ authStore.userName }}
+          <div class="mt-1 text-xs leading-none text-gray-500 font-medium truncate">
+            {{ authStore.userName || "Customer Portal" }}
           </div>
         </div>
         <div
-          class="duration-300 ease-in-out"
-          :class="
-            !sidebarStore.isExpanded
-              ? 'ml-0 w-0 overflow-hidden opacity-0'
-              : 'ml-2 w-auto opacity-100'
-          "
+          v-if="sidebarStore.isExpanded"
+          class="ml-2 duration-300 ease-in-out shrink-0"
         >
           <FeatherIcon
             name="chevron-down"
