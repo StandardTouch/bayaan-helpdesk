@@ -1,18 +1,132 @@
-import { Component } from "vue";
+import { Dayjs } from "dayjs";
+import { Component, ComputedRef, InjectionKey, Ref } from "vue";
+import type { AssignmentRule, HDCustomer, HDTicket } from "./types/doctypes";
 
-export interface Resource<T = unknown> {
-  auto: boolean;
+interface ResourceOptions<T = any> {
+  method?: string;
+  url: string;
+  initialData?: T;
+  auto?: boolean;
+  cache?: string | string[];
+  debounce?: number;
+  params?: any;
+  makeParams?: (params: any) => any;
+  onFetch?: (params: any) => void;
+  beforeSubmit?: (params: any) => void;
+  validate?: (params: any) => string | void;
+  onError?: (error: Error) => void;
+  onSuccess?: (data: T) => void;
+  onData?: (data: T) => void;
+  transform?: (data: any) => T;
+  resourceFetcher?: (options: any) => Promise<any>;
+}
+
+export interface Resource<T = any> {
+  method: string | undefined;
+  url: string;
+  data: T | null;
+  previousData: T | null;
   loading: boolean;
-  data: T;
-  pageLength: number;
-  totalCount: number;
-  hasNextPage: boolean;
-  list: {
-    loading: boolean;
+  fetched: boolean;
+  error: Error | null;
+  promise: Promise<T> | null;
+  auto: boolean;
+  params: any;
+  fetch: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  reload: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  submit: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  reset: () => void;
+  update: (options: {
+    method?: string;
+    url?: string;
+    params?: any;
+    auto?: boolean;
+  }) => void;
+  setData: (data: T | ((currentData: T) => T)) => void;
+}
+
+export interface ListResourceOptions {
+  doctype: string;
+  fields?: string[];
+  filters?: Record<string, any>;
+  orFilters?: Record<string, any>;
+  orderBy?: string;
+  start?: number;
+  pageLength?: number;
+  groupBy?: string;
+  parent?: string;
+  debug?: number;
+  auto?: boolean;
+  url?: string;
+  cache?: any;
+  realtime?: boolean;
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+  onData?: (data: any) => void;
+  transform?: (data: any) => any;
+  fetchOne?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
   };
+  insert?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  setValue?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  delete?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  runDocMethod?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+}
+
+export interface ListResource<T = any> {
+  doctype: string;
+  fields?: string[];
+  filters?: Record<string, any>;
+  orFilters?: Record<string, any>;
+  orderBy?: string;
+  start: number;
+  pageLength: number;
+  groupBy?: string;
+  parent?: string;
+  debug: number;
+  originalData: T[] | null;
+  dataMap: Record<string, T>;
+  data: T[] | null;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  auto?: boolean;
+  list: Resource<T[]>;
+  fetchOne: Resource<T>;
+  insert: Resource<T>;
+  setValue: Resource<T>;
+  delete: Resource<T>;
+  runDocMethod: Resource<T>;
+  loading: boolean;
+  update: (updatedOptions: Partial<ListResourceOptions>) => void;
+  fetch: () => void;
+  reload: () => Promise<T[]>;
+  setData: (data: T[] | ((data: T[]) => T[])) => void;
+  transform: (data: T[]) => T[];
+  getRow: (name: string) => T;
+  previous: () => void;
   next: () => void;
-  reload: () => void;
-  update: (r: unknown) => void;
 }
 
 export interface Error {
@@ -40,6 +154,10 @@ export interface Communication {
   sender: string;
   bcc?: string;
   cc?: string;
+  sent_or_received?: "Sent" | "Received";
+  email_account?: string;
+  sender_full_name?: string;
+  sender_mail_id?: string;
 }
 
 export interface Activity {
@@ -85,6 +203,7 @@ export interface Ticket {
   response_by: string;
   first_responded_on: string;
   resolution_date: string;
+  resolution_time: number;
   status: string;
   subject: string;
   ticket_type: string;
@@ -92,7 +211,6 @@ export interface Ticket {
   agreement_status: string;
   creation: string;
   feedback_rating?: number;
-  feedback_text?: string;
   feedback_extra?: string;
   contact: Contact;
   comments: Comment[];
@@ -102,6 +220,7 @@ export interface Ticket {
   views: ViewLog[];
   _customActions: Function[];
   is_merged?: boolean;
+  status_category: "Open" | "Paused" | "Resolved";
 }
 
 export interface DocField {
@@ -128,7 +247,6 @@ export interface AutoCompleteItem {
 export interface Field {
   fieldname: string;
   fieldtype: string;
-  hide_from_customer: 0 | 1;
   label: string;
   options: string;
   required: 0 | 1;
@@ -138,9 +256,12 @@ export interface Field {
   filters?: string;
   display_via_depends_on?: string;
   mandatory_via_depends_on?: string;
+  disabled?: boolean;
+  placeholder?: string | null;
+  readonly?: boolean;
 }
 
-export type FieldValue = string | number | boolean;
+export type FieldValue = string | number | boolean | null | undefined | Dayjs;
 
 export interface Template {
   about: string;
@@ -164,17 +285,6 @@ export type File = {
   attached_to_doctype?: string;
   attached_to_field?: string;
   attached_to_name?: string;
-};
-
-export type Notification = {
-  creation: string;
-  name: string;
-  notification_type: string;
-  read: boolean;
-  reference_comment: string;
-  reference_ticket: string;
-  user_from: UserInfo;
-  user_to: UserInfo;
 };
 
 export type UserInfo = {
@@ -215,12 +325,18 @@ export interface EmailAccount {
   default_incoming?: boolean;
 }
 
-export type TicketTab = "activity" | "email" | "comment" | "details";
+export type TicketTab =
+  | "activity"
+  | "email"
+  | "comment"
+  | "details"
+  | "call"
+  | "analytics";
 
 export interface TabObject {
-  name: TicketTab;
+  value: TicketTab;
   label: string;
-  icon: Component;
+  iconLeft: Component;
   condition?: () => boolean;
 }
 
@@ -278,7 +394,7 @@ export interface View {
   pinned?: boolean;
   public?: boolean;
   group_by_field?: string;
-  name?: string;
+  name: string;
   is_customer_portal?: boolean;
 }
 
@@ -296,44 +412,345 @@ export interface Breadcrumb {
   };
 }
 
-// Activity Types
-interface BaseActivity {
-  type: string;
-  key: string;
+
+export interface FieldCriteriaState {
+  selectedParentField: string;
+  selectedChildField: string;
+  childFields: any[];
+  parentFieldValues: any[];
+  childFieldValues: any[];
+  currentParentSelection: string;
+  childSelections: any;
+  initialChildSelections: any;
+  parentSearch: string;
+  childSearch: string;
+  enabled: boolean;
+}
+
+interface ResourceBase {
+  data: any;
+  error: any;
+  fetched: boolean;
+  loading: boolean;
+  params: any;
+  previousData: any;
+  promise: Promise<any> | null;
+  submit: (params?: any) => void;
+}
+
+interface DocumentResourceOptions<T = unknown> {
+  doctype: string;
+  name: string;
+  auto?: boolean;
+  whitelistedMethods?: Record<string, string>;
+  onError?: (error: any) => void;
+  onSuccess?: (data: T) => void;
+  transform?: (doc: T) => T;
+  delete?: {
+    onSuccess?: () => void;
+    onError?: (error: any) => void;
+  };
+  setValue?: {
+    onSuccess?: () => void;
+    onError?: (error: any) => void;
+  };
+}
+
+export interface DocumentResource<T = unknown> {
+  // Configuration
+  auto: boolean;
+  doctype: string;
+  name: string;
+  isDirty: boolean;
+  promise: Promise<void> | null;
+
+  // Main document data
+  doc: T;
+  originalDoc: T;
+
+  // Core methods
+  reload(): void;
+  update(options: Partial<DocumentResourceOptions<T>>): void;
+
+  // Sub-resources
+  get: ResourceBase & {
+    data: T;
+    params: {
+      doctype: string;
+      name: string;
+    };
+  };
+
+  setValue: ResourceBase & {
+    submit: (
+      values: Partial<T>,
+      options?: { onSuccess?: () => void; onError?: (error: any) => void }
+    ) => void;
+  };
+
+  setValueDebounced: ResourceBase & {
+    submit: (values: Partial<T>) => void;
+  };
+
+  save: ResourceBase;
+  delete: ResourceBase;
+
+  // Dynamic whitelisted methods
+  [methodName: string]: any;
+}
+
+export interface Customizations {
+  fields: {
+    fieldname: string;
+    required?: number;
+    placeholder?: string;
+    url_method?: string;
+  }[];
+  _form_script: string[];
+  _customActions?: any;
+  _customOnChange?: any;
+}
+
+export interface TicketContact {
+  name: string;
+  email_id: string;
+  phone: string;
+  mobile_no: string;
+  image: string;
+}
+
+// A ticket assignee enriched with their agent status by get_ticket_assignees.
+// Non-agent assignees only carry `name`.
+export interface TicketAssignee {
+  name: string;
+  agent_name?: string;
+  user_image?: string;
+  availability?: string;
+  availability_changed_on?: string;
+}
+
+// A TicketAssignee plus the option fields AssignTo keeps when an agent is
+// picked from the dropdown (image/label come from AgentOption).
+export interface LocalAssignee extends TicketAssignee {
+  image?: string;
+  label?: string;
+}
+
+export type RecentTicket = Record<
+  "subject" | "status" | "priority" | "name" | "creation",
+  string
+>;
+export type SimilarTicket = Record<
+  "subject" | "status" | "priority" | "name" | "creation",
+  string
+>;
+export interface RecentSimilarTicket {
+  recent_tickets: RecentTicket[];
+  similar_tickets: SimilarTicket[];
+}
+
+export interface HDSettings {
+  brandName: string;
+  brandLogo: string;
+  favicon: string;
+  autoCloseAfterDays: string;
+  autoCloseStatus: string;
+  autoCloseTickets: string;
+  assignWithinTeam: boolean;
+  doNotRestrictTicketsWithoutAnAgentGroup: boolean;
+  restrictTicketsByAgentGroup: boolean;
+  updateStatusTo: string;
+  autoUpdateStatus: boolean;
+  isFeedbackMandatory: boolean;
+  allowAnyoneToCreateTickets: boolean;
+  defaultTicketType: string;
+  preferKnowledgeBase: boolean;
+  skipEmailWorkflow: boolean;
+  disableSavedRepliesGlobalScope: boolean;
+  enableOutsideHoursBanner: boolean;
+  outsideWorkingHoursBannerMessage: string;
+}
+
+export interface HolidayList {
+  name: string;
+  description: string;
+}
+
+export interface SlaPolicy {
+  name: string;
+  description: string;
+  default_sla: boolean;
+  enabled: boolean;
+  rank: number;
   creation: string;
-  content: string;
 }
 
-interface HistoryActivity extends BaseActivity {
-  type: "history";
-  user: string;
-  relatedActivities: HistoryActivity[];
-}
-
-export interface EmailActivity extends BaseActivity {
-  type: "email";
-  attachments: FileAttachment;
-  bcc: string;
-  cc: string;
+export interface Team {
   name: string;
-  sender: { full_name: string; name: string };
-  subject: string;
-  to: string;
-  isFirstEmail: boolean;
+  team: string;
+  disabled: boolean;
 }
 
-export interface CommentActivity extends BaseActivity {
-  type: "comment";
+export interface SavedReply {
   name: string;
-  commenter: string;
-  commentedBy: string;
-  attachments: FileAttachment[];
+  title: string;
+  message: string;
+  scope: string;
+  teams: Team[];
+  /** JSON-encoded SavedReplyAction[] */
+  actions: string;
+  owner: string;
 }
 
-export type TicketActivity = HistoryActivity | EmailActivity | CommentActivity;
+export type SavedReplyActionType =
+  | "Set Status"
+  | "Set Priority"
+  | "Set Team"
+  | "Set Ticket Type"
+  | "Assign Agent"
+  | "Assign to Me"
+  | "Add Tag"
+  | "Remove Tag"
+  | "Add Comment";
 
-interface FileAttachment {
-  name: string;
-  file_name: string;
-  file_url: string;
+export interface SavedReplyAction {
+  action_type: SavedReplyActionType;
+  value: string;
+  label?: string;
+  /** Title of the saved reply that staged this action */
+  source?: string;
+  /** Value the saved reply shipped, so an edited comment can be restored */
+  original_value?: string;
+}
+
+export interface RenderedSavedReply {
+  title: string;
+  message: string;
+  actions: SavedReplyAction[];
+}
+
+export type APIOptions = DropdownOption[] | string[] | [];
+
+export type DropdownOption = {
+  label: string;
+  value: string | number;
+};
+
+export interface AgentOption {
+  value: string;
+  label: string;
+  image?: string;
+  availability?: string;
+  availability_changed_on?: string;
+}
+
+// symbols
+export const TicketSymbol: InjectionKey<
+  ComputedRef<DocumentResource<HDTicket>>
+> = Symbol("ticket");
+export const AssigneeSymbol: InjectionKey<
+  ComputedRef<Resource<Record<"name", string>[]>>
+> = Symbol("assignees");
+
+export const CustomizationSymbol: InjectionKey<
+  ComputedRef<Resource<Customizations>>
+> = Symbol("customizations");
+
+export const TicketContactSymbol: InjectionKey<
+  ComputedRef<Resource<TicketContact>>
+> = Symbol("ticketContact");
+
+export const RecentSimilarTicketsSymbol: InjectionKey<
+  ComputedRef<Resource<RecentSimilarTicket>>
+> = Symbol("recentSimilarTickets");
+
+export const AssignmentRuleListResourceSymbol: InjectionKey<
+  Resource<AssignmentRule[]>
+> = Symbol("assignmentRuleListResource");
+
+export const HDSettingsSymbol: InjectionKey<Ref<HDSettings>> =
+  Symbol("hdSettings");
+
+export const HolidayListResourceSymbol: InjectionKey<
+  ListResource<HolidayList>
+> = Symbol("holidayListResource");
+
+export const SlaPolicyListResourceSymbol: InjectionKey<
+  ListResource<SlaPolicy>
+> = Symbol("slaPolicyListResource");
+
+export const TeamListResourceSymbol: InjectionKey<ListResource<Team>> =
+  Symbol("teamListResource");
+
+export const SavedReplyListResourceSymbol: InjectionKey<
+  ListResource<SavedReply>
+> = Symbol("savedReplyListResource");
+
+export const CustomerResourceSymbol: InjectionKey<
+  DocumentResource<HDCustomer>
+> = Symbol("customerResource");
+
+declare global {
+  interface Window {
+    is_fc_site: boolean;
+    date_format: string;
+    time_format: string;
+    session_user: string;
+    timezone: Record<"user" | "system", string>;
+    agent: string | null;
+    default_country: string;
+    apps: string[];
+    telemetry: { enabled: boolean };
+  }
+}
+
+export interface CustomerContact {
+  contact_name: string;
+  is_primary: 0 | 1;
+  is_manager: 0 | 1;
+  email_id: string | null;
+  mobile_no: string | null;
+  image: string | null;
+  last_active: string;
+  modified?: string;
+  ticket_count: number;
+}
+export interface NewContactState {
+  firstName: string;
+  lastName: string;
+  image: string;
+  email: string;
+  phone: string;
+  timezone: string;
+  customer: string;
+  invite: boolean;
+}
+
+export interface ContactEmailEntry {
+  email_id: string;
+  isPrimary: boolean;
+  key: number;
+}
+
+export interface ContactPhoneEntry {
+  phone: string;
+  isPrimary: boolean;
+  key: number;
+}
+
+export interface EditContactState {
+  firstName: string;
+  lastName: string;
+  image: string;
+  emails: ContactEmailEntry[];
+  phones: ContactPhoneEntry[];
+  customers: string[];
+  customer: string;
+  timezone: string;
+}
+
+export interface LineChart {
+  percentage_change: number;
+  total: number;
+  data: { date: string; count: number }[];
 }

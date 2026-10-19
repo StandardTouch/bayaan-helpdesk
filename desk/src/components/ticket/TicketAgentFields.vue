@@ -1,6 +1,8 @@
 <template>
-  <div class="flex flex-1 flex-col overflow-hidden overflow-y-auto border-b">
-    <UniInput2
+  <div
+    class="flex flex-1 flex-col gap-1 overflow-hidden overflow-y-auto border-b px-6 py-3 sm:px-0 sm:py-3"
+  >
+    <TicketField
       v-for="field in fields"
       :key="field.fieldname"
       :field="field"
@@ -11,10 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import UniInput2 from "../UniInput2.vue";
-import { createToast } from "@/utils";
 import { Field, FieldValue } from "@/types";
+import { toast } from "frappe-ui";
+import { computed } from "vue";
+import TicketField from "../TicketField.vue";
 const emit = defineEmits(["update"]);
 
 const props = defineProps({
@@ -30,11 +32,7 @@ const fields = computed(() => {
 
 function update(field: Field["fieldname"], value: FieldValue, event = null) {
   if (field === "subject" && value === "") {
-    createToast({
-      title: "Subject is required",
-      icon: "x",
-      iconClasses: "text-red-600",
-    });
+    toast.error("Subject is required");
     event.target.value = props.ticket.subject;
     return;
   }
@@ -46,8 +44,8 @@ function update(field: Field["fieldname"], value: FieldValue, event = null) {
 :deep(.form-control select),
 :deep(.form-control textarea),
 :deep(.form-control button) {
-  border-color: transparent;
-  background: white;
+  border-color: var(--outline-gray-2);
+  background: var(--surface-base);
 }
 :deep(.form-control textarea) {
   field-sizing: content;
@@ -68,7 +66,7 @@ function update(field: Field["fieldname"], value: FieldValue, event = null) {
 }
 
 :deep(.form-control button svg) {
-  color: white;
+  color: var(--ink-base);
   width: 0;
 }
 </style>

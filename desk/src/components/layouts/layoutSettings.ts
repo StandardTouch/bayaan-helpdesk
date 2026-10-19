@@ -1,65 +1,65 @@
+import { ref } from "vue";
 import LucideBookOpen from "~icons/lucide/book-open";
-import LucideCloudLightning from "~icons/lucide/cloud-lightning";
-import LucideContact2 from "~icons/lucide/contact-2";
-import LucideTicket from "~icons/lucide/ticket";
-import LucideUser from "~icons/lucide/user";
-import { OrganizationsIcon } from "../icons";
 import LucideUsers from "~icons/lucide/users";
-import {
-  AGENT_PORTAL_AGENT_LIST,
-  AGENT_PORTAL_CONTACT_LIST,
-  AGENT_PORTAL_CUSTOMER_LIST,
-  AGENT_PORTAL_TEAM_LIST,
-  AGENT_PORTAL_TICKET_LIST,
-  AGENT_PORTAL_KNOWLEDGE_BASE,
-} from "@/router";
+import LucideTicket from "~icons/lucide/ticket";
+import LucideLayoutDashboard from "~icons/lucide/layout-dashboard";
+import { OrganizationsIcon } from "../icons";
+import PhoneIcon from "../icons/PhoneIcon.vue";
+import LucideHome from "~icons/lucide/home";
+import { __ } from "@/translation";
+
+/**
+ * Shared rather than local to Sidebar.vue: the command palette opens it too, and
+ * the palette is the discovery surface for the shortcut system.
+ */
+export const showShortcutsModal = ref(false);
 
 export const agentPortalSidebarOptions = [
   {
-    label: "Tickets",
-    icon: LucideTicket,
-    to: AGENT_PORTAL_TICKET_LIST,
+    label: __("Home"),
+    icon: LucideHome,
+    to: "Home",
   },
   {
-    label: "Knowledge Base",
+    label: __("Dashboard"),
+    icon: LucideLayoutDashboard,
+    to: "Dashboard"
+  },
+  {
+    label: __("Tickets"),
+    icon: LucideTicket,
+    to: "TicketsAgent",
+  },
+  {
+    label: __("Knowledge Base"),
     icon: LucideBookOpen,
     to: "AgentKnowledgeBase",
   },
   {
-    label: "Agents",
-    icon: LucideUser,
-    to: AGENT_PORTAL_AGENT_LIST,
-  },
-  {
-    label: "Teams",
-    icon: LucideUsers,
-    to: AGENT_PORTAL_TEAM_LIST,
-  },
-  {
-    label: "Canned responses",
-    icon: LucideCloudLightning,
-    to: "CannedResponses",
-  },
-  {
     label: "Customers",
     icon: OrganizationsIcon,
-    to: AGENT_PORTAL_CUSTOMER_LIST,
+    to: "CustomerList",
   },
   {
-    label: "Contacts",
-    icon: LucideContact2,
-    to: AGENT_PORTAL_CONTACT_LIST,
+    label: __("Contacts"),
+    icon: LucideUsers,
+    to: "ContactList",
+  },
+  {
+    label: __("Call Logs"),
+    icon: PhoneIcon,
+    to: "CallLogs",
   },
 ];
 
 export const customerPortalSidebarOptions = [
   {
-    label: "Tickets",
+    label: __("Tickets"),
     icon: LucideTicket,
     to: "TicketsCustomer",
   },
   {
-    label: "Knowledge Base",
+    label: __("Knowledge Base"),
     icon: LucideBookOpen,
     to: "CustomerKnowledgeBase",
   },
