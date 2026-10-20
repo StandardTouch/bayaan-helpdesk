@@ -100,22 +100,47 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "src"),
-        "@framework/ui$": path.resolve(
-          __dirname,
-          "src/shims/framework-ui.ts"
-        ),
-        "tailwind.config.js": path.resolve(__dirname, "tailwind.config.js"),
+      alias: [
+        {
+          find: /^@framework\/ui$/,
+          replacement: path.resolve(
+            __dirname,
+            "src/shims/framework-ui.ts"
+          ),
+        },
+        {
+          find: "@framework/ui/ActivityTimeline",
+          replacement: path.resolve(
+            __dirname,
+            "src/shims/activity-timeline.ts"
+          ),
+        },
+        {
+          find: "@framework/ui/fields",
+          replacement: path.resolve(
+            __dirname,
+            "../../frappe/ui/src/components/Fields/index.ts"
+          ),
+        },
+        {
+          find: "@",
+          replacement: path.resolve(__dirname, "src"),
+        },
+        {
+          find: "tailwind.config.js",
+          replacement: path.resolve(__dirname, "tailwind.config.js"),
+        },
         // @framework/ui still imports the `frappe-ui/editor-style.css` subpath,
         // dropped in frappe-ui 1.0.0-beta.63 (the editor entrypoint pulls its
         // own stylesheet now). Point it at the real file until frappe drops it.
-        "frappe-ui/editor-style.css": path.resolve(
-          __dirname,
-          "node_modules/frappe-ui/src/molecules/editor/style.css"
-        ),
-        // ...localFrappeUIAliases,
-      },
+        {
+          find: "frappe-ui/editor-style.css",
+          replacement: path.resolve(
+            __dirname,
+            "node_modules/frappe-ui/src/molecules/editor/style.css"
+          ),
+        },
+      ],
       // frappe-ui is served from source (excluded from optimizeDeps) and the
       // submodule ships its own node_modules with older tiptap/ProseMirror.
       // Force a single copy of each so the editor doesn't load two
