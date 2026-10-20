@@ -102,6 +102,10 @@ export default defineConfig(async ({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
+        "@framework/ui$": path.resolve(
+          __dirname,
+          "src/shims/framework-ui.ts"
+        ),
         "tailwind.config.js": path.resolve(__dirname, "tailwind.config.js"),
         // @framework/ui still imports the `frappe-ui/editor-style.css` subpath,
         // dropped in frappe-ui 1.0.0-beta.63 (the editor entrypoint pulls its
