@@ -68,3 +68,15 @@ index 91c8dc4..2883b93 100644
        floatingEl?.remove()
        renderer?.destroy()
        floatingEl = null
+diff --git a/node_modules/frappe-ui/src/molecules/code-editor/index.ts b/node_modules/frappe-ui/src/molecules/code-editor/index.ts
+index 784aca4..4dee1ef 100644
+--- a/node_modules/frappe-ui/src/molecules/code-editor/index.ts
++++ b/node_modules/frappe-ui/src/molecules/code-editor/index.ts
+@@ -12,6 +12,7 @@ export { useCodeEditor, type CodeEditorOptions } from './useCodeEditor'
+ // The component, and the one part. There are no menu parts: CodeMirror renders
+ // its own gutters, panels, tooltips and completion popups inside `view.dom`.
+ export { default as CodeEditor } from './CodeEditor.vue'
++export { default as CodePreview } from './CodeEditor.vue'
+ export { default as CodeEditorContent } from './CodeEditorContent.vue'
+ 
+ // Kit — one configurable extension bundle
