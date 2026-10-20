@@ -80,3 +80,16 @@ index 784aca4..4dee1ef 100644
  export { default as CodeEditorContent } from './CodeEditorContent.vue'
  
  // Kit — one configurable extension bundle
+diff --git a/node_modules/frappe-ui/src/index.ts b/node_modules/frappe-ui/src/index.ts
+index 942c1e3..0000000 100644
+--- a/node_modules/frappe-ui/src/index.ts
++++ b/node_modules/frappe-ui/src/index.ts
+@@ -23,6 +23,8 @@ export * from './components/BottomSheet'
+ export * from './components/Breadcrumbs'
+ export * from './components/Button'
+ export * from './components/Divider'
++export { default as FeatherIcon } from './components/Icon/Icon.vue'
++export { default as TextEditor } from './molecules/editor/Editor.vue'
+ export * from './components/Icon'
+ export * from './components/LoadingIndicator'
+ export * from './components/LoadingText'
