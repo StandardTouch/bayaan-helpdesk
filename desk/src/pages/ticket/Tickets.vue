@@ -187,9 +187,10 @@ const options = computed(() => ({
     status: {
       custom: ({ item }) => {
         const status = getStatus(item);
-        const label = isCustomerPortal.value
-          ? status?.["label_customer"]
-          : status?.["label_agent"];
+        const label =
+          (isCustomerPortal.value
+            ? status?.["label_customer"]
+            : status?.["label_agent"]) || item;
         return h(
           "div",
           { class: "flex items-center gap-1.5 justify-start w-full" },
