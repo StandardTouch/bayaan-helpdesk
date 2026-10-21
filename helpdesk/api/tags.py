@@ -9,6 +9,33 @@ FIRST_TICKET_TAG_COLOR = "Blue"
 
 
 @frappe.whitelist()
+def get_tags() -> list[dict]:
+    """Return all helpdesk tags with safe fallback if custom fields aren't migrated yet."""
+    fields = ["name"]
+    filters = {}
+    if frappe.db.has_column("Tag", "app"):
+        filters["app"] = "helpdesk"
+    if frappe.db.has_column("Tag", "color"):
+        fields.append("color")
+
+    try:
+        tags = frappe.get_all(
+            "Tag",
+            filters=filters,
+            fields=fields,
+            order_by="name asc",
+            limit=500,
+        )
+    except Exception:
+        tags = []
+
+    for tag in tags:
+        tag.setdefault("color", "Gray")
+
+    return tags
+
+
+@frappe.whitelist()
 @agent_only
 def update_tags(
     doctype: str,

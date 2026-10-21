@@ -1,4 +1,4 @@
-import { createListResource } from "frappe-ui";
+import { createResource } from "frappe-ui";
 
 export interface Tag {
   name: string;
@@ -31,20 +31,21 @@ export function colorToken(color?: string): string {
   return TAG_COLORS[color ?? ""] ?? DEFAULT_COLOR_CLASS;
 }
 
-let tagListResource: ReturnType<typeof createListResource<Tag>> | undefined;
+let tagListResource: ReturnType<typeof createResource<Tag[]>> | undefined;
 
 /** Shared master list of helpdesk tags, fetched once. Per-document tag changes
  * go through `helpdesk.api.tags.update_tags` (see Tags.vue). */
 export function useTags() {
-  tagListResource ??= createListResource({
-    doctype: "Tag",
-    fields: ["name", "color"],
+  tagListResource ??= createResource({
+    url: "helpdesk.api.tags.get_tags",
     cache: ["Tags", "Helpdesk"],
-    filters: { app: "helpdesk" },
-    orderBy: "name asc",
-    pageLength: 500,
+    initialData: [],
     auto: true,
+    onError(err) {
+      console.warn("Failed to fetch tags:", err);
+    },
   });
 
   return { tagListResource };
 }
+

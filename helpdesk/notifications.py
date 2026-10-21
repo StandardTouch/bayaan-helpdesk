@@ -82,7 +82,7 @@ def notify_reaction(comment, reacting_user: str) -> None:
 
 
 @frappe.whitelist()
-def clear(ticket: str | None = None, comment: str | None = None) -> int:
+def clear(ticket: str | int | None = None, comment: str | None = None) -> int:
     """Mark the session user's helpdesk notifications as read.
 
     Every helpdesk notification references the ticket, so clearing one covers
@@ -91,11 +91,11 @@ def clear(ticket: str | None = None, comment: str | None = None) -> int:
     filters = {"for_user": frappe.session.user, "read": 0, "app": HELPDESK_APP}
     if comment:
         return mark_read(
-            {**filters, "source_doctype": "Comment", "source_name": comment}
+            {**filters, "source_doctype": "Comment", "source_name": str(comment)}
         )
     if ticket:
         return mark_read(
-            {**filters, "document_type": "HD Ticket", "document_name": ticket}
+            {**filters, "document_type": "HD Ticket", "document_name": str(ticket)}
         )
     return mark_read(filters)
 

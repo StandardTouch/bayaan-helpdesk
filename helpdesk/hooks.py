@@ -23,6 +23,7 @@ get_site_info = "helpdesk.activation.get_site_info"
 
 after_install = "helpdesk.setup.install.after_install"
 after_migrate = [
+    "helpdesk.setup.install.create_helpdesk_custom_fields",
     "helpdesk.search.build_index_in_background",
     "helpdesk.search.download_corpus",
 ]

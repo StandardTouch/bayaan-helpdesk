@@ -74,6 +74,9 @@ export const useAgentStatusStore = defineStore("agentStatus", () => {
     orderBy: "`tabHD Agent Status`.status_order",
     pageLength: 1000,
     auto: true,
+    onError(error) {
+      console.warn("HD Agent Status list could not be loaded:", error);
+    },
   });
 
   // Live availability keyed by HD Agent name. Seeded by fetches and kept current

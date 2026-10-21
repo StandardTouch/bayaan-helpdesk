@@ -938,7 +938,7 @@ class HDTicket(Document, CustomerEditController):
             unique_views=True, force=True
         )  # Document class method, no way to add unique_views via document settings, hence used force and unique_views=True
         self.add_seen()
-        return clear_notifications(ticket=self.name)
+        return clear_notifications(ticket=str(self.name))
 
     def is_valid_status_transition(self) -> bool:
         """Closing an already-resolved ticket wraps up an outcome, it is not a new one."""

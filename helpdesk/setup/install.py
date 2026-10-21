@@ -15,8 +15,12 @@ from .ticket_type import create_fallback_ticket_type, create_ootb_ticket_types
 from .welcome_ticket import create_welcome_ticket
 
 
-def after_install():
+def create_helpdesk_custom_fields():
     create_custom_fields(get_custom_fields())
+
+
+def after_install():
+    create_helpdesk_custom_fields()
     add_default_status()
     add_default_agent_status()
     add_default_categories_and_articles()
@@ -192,6 +196,7 @@ def update_agent_role_permissions():
         add_permission("Contact", "Agent", 0)
         add_permission("Email Account", "Agent", 0)
         add_permission("Communication", "Agent", 0)
+        add_permission("Tag", "Agent", 0)
 
 
 def add_agent_manager_permissions():

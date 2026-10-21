@@ -50,6 +50,9 @@ export const useTicket = (ticketId: string): MapValue => {
             method: "mark_seen",
             onSuccess: (cleared: number) =>
               cleared && useNotificationStore().controller.reload(),
+            onError: (error) => {
+              console.warn("mark_seen failed:", error);
+            },
           },
         },
         setValue: {

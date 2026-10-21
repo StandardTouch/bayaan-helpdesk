@@ -2,7 +2,7 @@ import frappe
 
 
 @frappe.whitelist()
-def clear(ticket: str | None = None, comment: str | None = None):
+def clear(ticket: str | int | None = None, comment: str | None = None):
     """
     Mark notifications as read. No arguments will clear all notifications for `user`.
 
@@ -11,9 +11,9 @@ def clear(ticket: str | None = None, comment: str | None = None):
     """
     filters = {"user_to": frappe.session.user, "read": False}
     if ticket:
-        filters["reference_ticket"] = ticket
+        filters["reference_ticket"] = str(ticket)
     if comment:
-        filters["reference_comment"] = comment
+        filters["reference_comment"] = str(comment)
     for notification in frappe.get_all(
         "HD Notification", filters=filters, pluck="name"
     ):

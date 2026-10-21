@@ -18,8 +18,11 @@ export const useTicketStatusStore = defineStore("ticketStatus", () => {
     orderBy: "`tabHD Ticket Status`.order",
     pageLength: 1000,
     auto: true,
+    onError(error) {
+      console.warn("HD Ticket Status list could not be loaded:", error);
+    },
     transform: (data: HDTicketStatus[]) => {
-      return data.map((d) => {
+      return (data || []).map((d) => {
         if (!d.different_view) {
           d.label_customer = d.label_agent;
         }
