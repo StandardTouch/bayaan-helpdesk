@@ -9,7 +9,7 @@
 
       <!-- Go to Home Desk View Button -->
       <button 
-        class="inline-flex items-center justify-center gap-1.5 transition-all text-white bg-[#ED1D24] hover:bg-[#d0171d] active:bg-[#b81016] font-semibold text-xs px-3.5 py-1.5 rounded-md ml-2 shadow-xs cursor-pointer border-0" 
+        class="inline-flex items-center justify-center gap-1.5 transition-all text-white bg-[#0087b9] hover:bg-[#00739e] active:bg-[#005f83] font-semibold text-xs px-3.5 py-1.5 rounded-md ml-2 shadow-xs cursor-pointer border-0" 
         @click="goToDesk"
         title="Go to Home Desk view"
       >
