@@ -31,8 +31,9 @@ share/python-wheels/
 *.egg
 
 helpdesk/docs/current
-helpdesk/public/desk
+# Prebuilt frontend assets tracked for Frappe Cloud deployments
+!helpdesk/public/desk/
+!helpdesk/www/helpdesk/index.html
 helpdesk/public/frontend
 helpdesk/public/node_modules
-helpdesk/www/helpdesk/index.html
 desk/components.d.ts
