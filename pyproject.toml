@@ -14,3 +14,16 @@ dependencies = [
 [build-system]
 requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<17.0.0"
+
+[tool.bench.assets]
+build_dir = "./desk"
+out_dir = "./helpdesk/public/desk"
+index_html_path = "./helpdesk/www/helpdesk/index.html"
+
+[project.urls]
+Homepage = "https://frappe.io/helpdesk"
+Repository = "https://github.com/frappe/helpdesk.git"
+"Bug Reports" = "https://github.com/frappe/helpdesk/issues"
