@@ -1,29 +1,41 @@
 import * as LucideIcons from "lucide-static";
 
-const icons = {};
-for (const icon in LucideIcons) {
-  let iconSvg = LucideIcons[icon];
-  if (icon == "default") {
-    continue;
-  }
+const icons: Record<string, string> = {};
 
-  // set stroke-width to 1.5
-  if (iconSvg && iconSvg.includes("stroke-width")) {
-    iconSvg = iconSvg.replace(/stroke-width="2"/g, 'stroke-width="1.5"');
-  }
-  icons[icon] = iconSvg;
+function processIcons(source: any) {
+  if (!source || typeof source !== "object") return;
+  for (const icon in source) {
+    if (icon === "default" || icon === "__esModule") {
+      continue;
+    }
+    let iconSvg = source[icon];
+    if (!iconSvg || typeof iconSvg !== "string") {
+      continue;
+    }
 
-  const dashKeys = camelToDash(icon);
-  for (const dashKey of dashKeys) {
-    if (dashKey !== icon) {
-      icons[dashKey] = iconSvg;
+    // set stroke-width to 1.5
+    if (iconSvg.includes("stroke-width")) {
+      iconSvg = iconSvg.replace(/stroke-width="2"/g, 'stroke-width="1.5"');
+    }
+    icons[icon] = iconSvg;
+
+    const dashKeys = camelToDash(icon);
+    for (const dashKey of dashKeys) {
+      if (dashKey !== icon) {
+        icons[dashKey] = iconSvg;
+      }
     }
   }
 }
 
+processIcons(LucideIcons);
+if ((LucideIcons as any).default && typeof (LucideIcons as any).default === "object") {
+  processIcons((LucideIcons as any).default);
+}
+
 export default icons;
 
-function camelToDash(key) {
+function camelToDash(key: string) {
   // barChart2 -> bar-chart-2
   const withNumber = key.replace(/[A-Z0-9]/g, (m) => "-" + m.toLowerCase());
   // barChart2 -> bar-chart2
