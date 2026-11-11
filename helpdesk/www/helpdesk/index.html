@@ -1,13 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ boot.lang or 'en' }}" dir="{{ boot.dir or 'ltr' }}">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="/assets/helpdesk/desk/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Helpdesk</title>
+    <title>Standard Touch Helpdesk Portal</title>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Frappe Helpdesk" />
+    <meta name="apple-mobile-web-app-title" content="Standard Touch Helpdesk Portal" />
     <meta name="apple-mobile-web-app-status-bar-style" content="white" />
+
+    <!-- Google Fonts: Poppins & Montserrat for StandardTouch Brand Kit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Poppins:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600&display=swap" rel="stylesheet" />
 
     <!-- PWA -->
     <link
@@ -198,15 +204,19 @@
       href="/assets/helpdesk/desk/manifest/apple-splash-1136-640.jpg"
       media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
     />
-    <script type="module" crossorigin src="/assets/helpdesk/desk/assets/index-BFr06o_V.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/helpdesk/desk/assets/index-DPLjpnf9.css">
+    <script type="module" crossorigin src="/assets/helpdesk/desk/assets/index-z8Gru4JE.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/helpdesk/desk/assets/index-DV1PRwkv.css">
   <link rel="manifest" href="/assets/helpdesk/desk/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/assets/helpdesk/desk/registerSW.js"></script></head>
   <body>
     <div id="app"></div>
     <div id="modals"></div>
     <div id="popovers"></div>
     <script>
-      window.site_name = "{{ site_name }}";
+      window.favicon = "{{ favicon }}";
+
+      document.querySelectorAll("link[rel='icon']").forEach((link) => {
+        link.href = window.favicon;
+      });
     </script>
   
           <script>

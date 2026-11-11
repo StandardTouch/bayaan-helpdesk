@@ -1,11 +1,12 @@
-module.exports = {
-  mode: "jit",
-  presets: [require("frappe-ui/src/tailwind/preset")],
+import frappeUIPreset, { content as frappeUIContent } from "frappe-ui/tailwind";
+import typography from "@tailwindcss/typography";
+
+export default {
+  presets: [frappeUIPreset],
   content: [
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
-    "./node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
-    "../node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
+    ...frappeUIContent,
   ],
   theme: {
     extend: {
@@ -21,5 +22,18 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@tailwindcss/typography")],
+  plugins: [
+    typography,
+    function ({ addUtilities }) {
+      addUtilities({
+        ".hide-scrollbar": {
+          "scrollbar-width": "none",
+          "-ms-overflow-style": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+        },
+      });
+    },
+  ],
 };

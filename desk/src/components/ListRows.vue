@@ -58,14 +58,13 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { Button, Dropdown } from "frappe-ui";
 import {
-  ListRows,
-  ListRow,
   ListGroupHeader,
   ListGroupRows,
-  Dropdown,
-  Button,
-} from "frappe-ui";
+  ListRow,
+  ListRows,
+} from "frappe-ui/experimental";
 
 import IconMoreHorizontal from "~icons/lucide/more-horizontal";
 const props = defineProps({

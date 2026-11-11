@@ -250,8 +250,8 @@ router.beforeEach(async (to, _, next) => {
     to.path === "/forgot-password"
   ) {
     if (authStore.isLoggedIn) {
-      if (authStore.hasDeskAccess) {
-        window.location.href = "/app";
+      if (authStore.hasDeskAccess || authStore.isAgent || authStore.isAdmin) {
+        next({ name: AGENT_PORTAL_LANDING });
         return;
       } else {
         next({ path: "/my-tickets" });
@@ -265,17 +265,21 @@ router.beforeEach(async (to, _, next) => {
 
   if (
     authStore.isLoggedIn &&
-    authStore.hasDeskAccess &&
     (to.path === "/" || to.path === "" || to.name === "CustomerRoot")
   ) {
-    window.location.href = "/app";
-    return;
+    if (authStore.hasDeskAccess || authStore.isAgent || authStore.isAdmin) {
+      next({ name: AGENT_PORTAL_LANDING });
+      return;
+    } else {
+      next({ path: "/my-tickets" });
+      return;
+    }
   }
 
   if (!authStore.isLoggedIn) {
     next({ name: "Signup" });
     return;
-  } else if (to.name === "TicketAgent" && !authStore.isAgent) {
+  } else if (to.name === "TicketAgent" && !authStore.isAgent && !authStore.isAdmin && !authStore.hasDeskAccess) {
     const ticketId = to.params.ticketId;
     next({
       name: "TicketCustomer",

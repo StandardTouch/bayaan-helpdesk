@@ -35,12 +35,13 @@ def register_portal_user(full_name, email, password, company_name=None):
     frappe.set_user("Administrator")
 
     try:
-        # Ensure 'Helpdesk User' role exists
-        if not frappe.db.exists("Role", "Helpdesk User"):
-            hd_role = frappe.new_doc("Role")
-            hd_role.role_name = "Helpdesk User"
-            hd_role.desk_access = 0
-            hd_role.insert(ignore_permissions=True)
+        # Ensure roles exist
+        for r_name in ["HD Customer", "Helpdesk User", "Helpdesk Contact"]:
+            if not frappe.db.exists("Role", r_name):
+                hd_role = frappe.new_doc("Role")
+                hd_role.role_name = r_name
+                hd_role.desk_access = 0
+                hd_role.insert(ignore_permissions=True)
 
         user = frappe.get_doc(
             {
@@ -51,6 +52,7 @@ def register_portal_user(full_name, email, password, company_name=None):
                 "send_welcome_email": 0,
                 "user_type": "Website User",
                 "roles": [
+                    {"role": "HD Customer"},
                     {"role": "Helpdesk User"},
                     {"role": "Helpdesk Contact"},
                 ],

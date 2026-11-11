@@ -1,11 +1,32 @@
 import frappe
 
+from helpdesk.utils import agent_only, get_agent_name, get_agents_team
 from helpdesk.utils import is_agent as _is_agent
 
 
 @frappe.whitelist(allow_guest=True)
 def get_user():
     current_user = frappe.session.user
+    if current_user == "Guest":
+        return {
+            "has_desk_access": False,
+            "is_admin": False,
+            "is_agent": False,
+            "has_agent_record": False,
+            "user_id": "Guest",
+            "is_manager": False,
+            "user_image": None,
+            "user_first_name": "Guest",
+            "user_name": "Guest",
+            "username": "guest",
+            "time_zone": None,
+            "language": None,
+            "user_teams": [],
+            "availability": None,
+            "availability_changed_on": None,
+            "availability_changed_by": None,
+        }
+
     filters = {"name": current_user}
     fields = [
         "first_name",
@@ -14,6 +35,7 @@ def get_user():
         "user_image",
         "username",
         "time_zone",
+        "language",
     ]
     user = frappe.get_value(
         doctype="User",
@@ -22,31 +44,44 @@ def get_user():
         as_dict=True,
     ) or {}
 
-    if current_user == "Guest":
-        has_desk_access = False
-        is_admin = False
-        is_agent = False
-        is_manager = False
-    else:
-        user_type = frappe.db.get_value("User", current_user, "user_type")
-        roles = set(frappe.get_roles(current_user))
-        portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest"}
-        non_portal_roles = roles - portal_roles
-        is_admin = bool(roles.intersection({"System Manager", "Administrator"})) or current_user == "Administrator"
-        is_agent = _is_agent() and (user_type == "System User" or current_user == "Administrator")
-        has_desk_access = (user_type == "System User" or current_user == "Administrator") and (bool(non_portal_roles) or is_agent or is_admin)
-        is_manager = ("Agent Manager") in roles
+    user_type = frappe.db.get_value("User", current_user, "user_type")
+    roles = set(frappe.get_roles(current_user))
+    portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest", "HD Customer"}
+    non_portal_roles = roles - portal_roles
+    is_admin = bool(roles.intersection({"System Manager", "Administrator"})) or current_user == "Administrator"
+    is_agent = _is_agent() and (user_type == "System User" or current_user == "Administrator")
+    agent_name = get_agent_name()
+    has_agent_record = bool(agent_name)
+    has_desk_access = (user_type == "System User" or current_user == "Administrator") and (bool(non_portal_roles) or is_agent or is_admin)
+    is_manager = ("Agent Manager") in roles
+
+    availability = (
+        frappe.db.get_value(
+            "HD Agent",
+            agent_name,
+            ["availability", "availability_changed_on", "availability_changed_by"],
+            as_dict=True,
+        )
+        if agent_name
+        else None
+    ) or {}
 
     user_image = user.get("user_image")
     user_first_name = user.get("first_name")
     user_name = user.get("full_name")
     user_id = user.get("name") or current_user
     username = user.get("username")
+    language = user.get("language") or frappe.db.get_single_value(
+        "System Settings", "language"
+    )
+    user_team = get_agents_team()
+    user_team_names = [team["team_name"] for team in user_team] if user_team else []
 
     return {
         "has_desk_access": has_desk_access,
         "is_admin": is_admin,
         "is_agent": is_agent,
+        "has_agent_record": has_agent_record,
         "user_id": user_id,
         "is_manager": is_manager,
         "user_image": user_image,
@@ -54,6 +89,11 @@ def get_user():
         "user_name": user_name,
         "username": username,
         "time_zone": user.get("time_zone"),
+        "language": language,
+        "user_teams": user_team_names,
+        "availability": availability.get("availability"),
+        "availability_changed_on": availability.get("availability_changed_on"),
+        "availability_changed_by": availability.get("availability_changed_by"),
     }
 
 
@@ -65,15 +105,14 @@ def get_post_login_redirect():
 
     user_type = frappe.db.get_value("User", current_user, "user_type")
     roles = set(frappe.get_roles(current_user))
-    portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest"}
+    portal_roles = {"Helpdesk User", "Helpdesk Contact", "Customer", "All", "Guest", "HD Customer", "HD Customer Manager"}
     non_portal_roles = roles - portal_roles
 
     if user_type != "System User" and current_user != "Administrator" and not non_portal_roles:
         return "/helpdesk/my-tickets"
     elif non_portal_roles or user_type == "System User" or current_user == "Administrator":
-        return "/app"
+        return "/helpdesk/tickets"
 
-    # Otherwise only helpdesk user role -> customer portal
     return "/helpdesk/my-tickets"
 
 

@@ -37,3 +37,4 @@ helpdesk/docs/current
 helpdesk/public/frontend
 helpdesk/public/node_modules
 desk/components.d.ts
+*.d.ts

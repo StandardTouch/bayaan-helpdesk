@@ -122,7 +122,11 @@
 <script setup lang="ts">
 import { computed, markRaw, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { TrialBanner } from "frappe-ui/frappe";
+const TrialBanner = {
+  name: "TrialBanner",
+  props: ["isSidebarCollapsed"],
+  template: "<div />",
+};
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
